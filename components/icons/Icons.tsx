@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 import { SocialPlatform } from '../../types';
 
@@ -21,6 +22,18 @@ export const Share2Icon: React.FC<IconProps> = ({ className }) => <svg xmlns="ht
 export const SpinnerIcon: React.FC<IconProps> = ({ className }) => <svg className={`${className} animate-spin`} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>;
 export const ProFolioIcon: React.FC<IconProps> = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" /></svg>;
 export const BibIcon: React.FC<IconProps> = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V6z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 9v6l5-3-5-3z" /></svg>;
+export const BrainCircuitIcon: React.FC<IconProps> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9.5 13a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M14.5 13a2.5 2.5 0 115 0 2.5 2.5 0 01-5 0z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.75v1.5M12 17.75v1.5M4.75 12h1.5M17.75 12h1.5" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M8.5 10.5V7a3.5 3.5 0 017 0v3.5" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 11.5v2M8.5 13h-2a1 1 0 00-1 1v1.5a1.5 1.5 0 001.5 1.5h1" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M15.5 13h2a1 1 0 011 1v1.5a1.5 1.5 0 01-1.5 1.5h-1" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 14.5a2.5 2.5 0 01-2.5-2.5" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 14.5a2.5 2.5 0 002.5-2.5" />
+    </svg>
+);
 export const AlertCircleIcon: React.FC<IconProps> = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
 export const WalletIcon: React.FC<IconProps> = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>;
 export const ArrowUpIcon: React.FC<IconProps> = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" /></svg>;

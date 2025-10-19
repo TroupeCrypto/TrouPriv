@@ -1,6 +1,7 @@
 
 
 
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 // FIX: Added AIPersona, AIProtocol, AIMemoryItem to import
 import { Page, Asset, CryptoCurrency, VaultItem, Alert, Profile, AppSettings, PortfolioHistoryPoint, cryptoAssetTypes, AssetCategory, MintedNft, AppData, Position, Web3Wallet, DeploymentTransaction, BrandAuthConfig, AIPersona, AIProtocol, AIMemoryItem } from './types';
@@ -218,7 +219,7 @@ const App: React.FC = () => {
       case Page.PromptStudio:
         return <PromptStudio setPage={setPage} />;
       case Page.Bib:
-        return <BibPage setPage={setPage} />;
+        return <BibPage setPage={setPage} aiPersona={appData.aiPersona} setAiPersona={setAiPersona} aiProtocols={appData.aiProtocols} setAiProtocols={setAiProtocols} aiMemory={appData.aiMemory} setAiMemory={setAiMemory} />;
       case Page.AIStudio:
         return <AIStudio setPage={setPage} vaultItems={appData.vaultItems} />;
       case Page.Business:

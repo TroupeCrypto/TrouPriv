@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 // FIX: Use relative paths for local modules
 import { Page } from '../types';
 // FIX: Use relative paths for local modules
-import { LogoIcon, DashboardIcon, AssetsIcon, VaultIcon, ProfileIcon, SettingsIcon, CodeIcon, BusinessIcon, Share2Icon, SpinnerIcon, ProFolioIcon, BibIcon, AlertCircleIcon, WalletIcon, SparklesIcon, TerminalIcon, NftCollectionIcon, MenuIcon } from './icons/Icons';
+import { LogoIcon, DashboardIcon, AssetsIcon, VaultIcon, ProfileIcon, SettingsIcon, CodeIcon, BusinessIcon, Share2Icon, SpinnerIcon, ProFolioIcon, AlertCircleIcon, WalletIcon, SparklesIcon, TerminalIcon, NftCollectionIcon, MenuIcon, BrainCircuitIcon } from './icons/Icons';
 
 export type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 
@@ -21,7 +21,8 @@ interface MenuItem {
 
 const mainNavItems: Omit<MenuItem, 'children'>[] = [
     { label: Page.Dashboard, page: Page.Dashboard, icon: <DashboardIcon className="w-5 h-5"/> },
-    { label: 'BiB!', page: Page.Bib, icon: <BibIcon className="w-5 h-5" /> },
+    { label: 'BiB! AI Core', page: Page.Bib, icon: <BrainCircuitIcon className="w-5 h-5" /> },
+    { label: 'AI Studio', page: Page.AIStudio, icon: <SparklesIcon className="w-5 h-5" /> },
 ];
 
 const modalNavGroups: MenuItem[] = [
