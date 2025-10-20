@@ -393,7 +393,8 @@ const AIStudio: React.FC<AIStudioProps> = ({ setPage, vaultItems }) => {
                     <BibIcon className="w-8 h-8 text-cyan-400" />
                     <div>
                         <h1 className="text-3xl font-bold text-white">AI Studio</h1>
-                        <button onClick={() => setPage(Page.Bib)} className="text-sm text-cyan-400 hover:underline">&larr; Back to BiB!</button>
+                        {/* FIX: Changed Page.Bib to Page.Persona as Page.Bib does not exist in the enum. */}
+                        <button onClick={() => setPage(Page.Persona)} className="text-sm text-cyan-400 hover:underline">&larr; Back to BiB!</button>
                     </div>
                 </div>
             </header>

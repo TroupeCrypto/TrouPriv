@@ -1,6 +1,8 @@
+
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { GoogleGenAI } from "@google/genai";
 import { Asset, CryptoCurrency, PortfolioHistoryPoint, cryptoAssetTypes, AssetCategory } from '../types';
+// FIX: Use relative paths for local modules
 import { ArrowUpIcon, ArrowDownIcon, CryptoIcon, SparklesIcon, SpinnerIcon, StarIcon } from '../components/icons/Icons';
 import { get, set } from '../utils/storage';
 

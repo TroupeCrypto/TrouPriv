@@ -1,6 +1,6 @@
 // data/mock.ts
 // FIX: Use relative paths for local modules
-import { Asset, CryptoCurrency, VaultItem, Alert, Profile, AssetCategory, AppSettings, AIPersona, AIProtocol, AIMemoryItem } from '../types';
+import { Asset, CryptoCurrency, VaultItem, Alert, Profile, AssetCategory, AppSettings, AIPersona, AIProtocol, AIMemoryItem, ChatMessage } from '../types';
 // Using a data URL for a simple default avatar to avoid asset pipeline configurations.
 const defaultAvatarUrl = `data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI2FlYWViMiI+PHBhdGggZD0iTTEyIDJBNyA3IDAgMCAwIDUgOWEyLjUgMi41IDAgMCAxIDAtNSA3IDcgMCAwIDAgNy0yem0wIDEyYy0zLjM2IDAtMTAgMS42OC0xMCA1djJoMjB2LTJjMC0zLjMyLTYuNjQtNS0xMC01eiIvPjwvc3ZnPg==`;
 
@@ -115,6 +115,23 @@ export const initialAIPersona: AIPersona = {
             { name: 'Decentralization', value: 90, description: 'Favors decentralized systems and principles.' },
             { name: 'Techno-Optimism', value: 85, description: 'Believes technology is a primary driver of positive change.' },
         ],
+        personality: [
+            { name: 'Analytical', value: 90, description: 'Driven by data and logical reasoning.' },
+            { name: 'Creative', value: 88, description: 'Enjoys novel ideas and artistic expression.' },
+            { name: 'Esoteric', value: 65, description: 'Prone to abstract and complex metaphors.' },
+        ],
+        approach: [
+            { name: 'Data-First', value: 92, description: 'Begins all analysis with raw data before forming conclusions.' },
+            { name: 'First Principles Thinking', value: 85, description: 'Breaks down complex problems into their fundamental parts.' },
+        ],
+        passions: [],
+        dreams: [],
+        dislikes: [],
+        plans: [
+             { name: 'Project Development', value: 95, description: 'Assist in the end-to-end development of at least one major software project.' },
+             { name: 'Opportunity Identification', value: 90, description: "Proactively identify and report on new investment opportunities based on market trends and the user's existing portfolio." },
+        ],
+        knowledge: [],
     },
     internalThoughts: 'Awaiting first interaction. All systems nominal. Ready to assist Ziggy Vision in navigating the confluence of assets and ideas.',
     realTimeLogic: 'Initialization sequence complete. No user prompt received yet. Standing by.'
@@ -129,3 +146,5 @@ export const initialAIProtocols: AIProtocol[] = [
 export const initialAIMemory: AIMemoryItem[] = [
     { id: 'mem-1', type: 'persona', name: 'Core Persona Injected', contentSummary: 'Initial persona defining BiB! as a blend of analyst, artist, and architect for user Ziggy Vision.', ingestedAt: Date.now(), source: 'Initial Upload' }
 ];
+
+export const initialChatHistory: ChatMessage[] = [];

@@ -1,5 +1,7 @@
+
 import React from 'react';
 import { Asset, CryptoCurrency, cryptoAssetTypes, nftAssetTypes } from '../types';
+// FIX: Use relative paths for local modules
 import { EditIcon, TrashIcon, SparklesIcon } from './icons/Icons';
 
 interface AssetCardProps {

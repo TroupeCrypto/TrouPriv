@@ -1,7 +1,9 @@
 
+
 import React from 'react';
 import { BrandAuthConfig } from '../types';
 import SocialLoginCard from '../components/SocialLoginCard';
+// FIX: Use relative paths for local modules
 import { Share2Icon } from '../components/icons/Icons';
 
 interface SocialPageProps {

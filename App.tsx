@@ -1,12 +1,10 @@
 
 
-
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 // FIX: Added AIPersona, AIProtocol, AIMemoryItem to import
-import { Page, Asset, CryptoCurrency, VaultItem, Alert, Profile, AppSettings, PortfolioHistoryPoint, cryptoAssetTypes, AssetCategory, MintedNft, AppData, Position, Web3Wallet, DeploymentTransaction, BrandAuthConfig, AIPersona, AIProtocol, AIMemoryItem } from './types';
+import { Page, Asset, CryptoCurrency, VaultItem, Alert, Profile, AppSettings, PortfolioHistoryPoint, cryptoAssetTypes, AssetCategory, MintedNft, AppData, Position, Web3Wallet, DeploymentTransaction, BrandAuthConfig, AIPersona, AIProtocol, AIMemoryItem, ChatMessage } from './types';
 // FIX: Added initialAIPersona, initialAIProtocols, initialAIMemory to import
-import { initialAssets, initialCryptoCurrencies, initialProfile, initialVaultItems, initialAlerts, initialAssetCategories, initialSettings, initialAIPersona, initialAIProtocols, initialAIMemory } from './data/mock';
+import { initialAssets, initialCryptoCurrencies, initialProfile, initialVaultItems, initialAlerts, initialAssetCategories, initialSettings, initialAIPersona, initialAIProtocols, initialAIMemory, initialChatHistory } from './data/mock';
 import { brandAuthConfigs as initialSocialAuth } from './data/socialAuth';
 import { get, set } from './utils/storage';
 import { fetchCryptoPrices } from './services/cryptoService';
@@ -18,6 +16,7 @@ import SettingsPage from './pages/Settings';
 import WebDev from './pages/WebDev';
 import Business from './pages/Business';
 import Social from './pages/Social';
+// FIX: Use relative paths for local modules
 import Header, { SaveStatus } from './components/Header';
 import { psychedelicBackgrounds } from './data/backgrounds';
 import PromptStudio from './pages/PromptStudio';
@@ -25,7 +24,6 @@ import Web3Tools from './pages/Web3Tools';
 import PsychedelicNftWorkshop from './pages/PsychedelicNftWorkshop';
 import ManageCategories from './pages/ManageCategories';
 import ProFolioPage from './pages/NftCollections';
-import BibPage from './pages/BibPage';
 import AIStudio from './pages/AIStudio';
 import CodePage from './pages/CodePage';
 import { MasterPasswordProvider } from './contexts/MasterPasswordContext';
@@ -34,6 +32,11 @@ import ConceptualizePage from './pages/ConceptualizePage';
 import CreatePage from './pages/CreatePage';
 import DesignPage from './pages/DesignPage';
 import WalletPage from './pages/WalletPage';
+import PersonaPage from './pages/PersonaPage';
+import LearningPage from './pages/LearningPage';
+import ProtocolsPage from './pages/ProtocolsPage';
+import BusinessMeetingPage from './pages/BusinessMeetingPage';
+import ChatPage from './pages/ChatPage';
 
 
 const App: React.FC = () => {
@@ -56,6 +59,7 @@ const App: React.FC = () => {
       aiPersona: initialAIPersona,
       aiProtocols: initialAIProtocols,
       aiMemory: initialAIMemory,
+      chatHistory: initialChatHistory,
     });
     // Ensure all keys are present even if loading older data
     return {
@@ -75,6 +79,7 @@ const App: React.FC = () => {
         aiPersona: savedData.aiPersona || initialAIPersona,
         aiProtocols: savedData.aiProtocols || initialAIProtocols,
         aiMemory: savedData.aiMemory || initialAIMemory,
+        chatHistory: savedData.chatHistory || initialChatHistory,
     };
   });
   
@@ -107,6 +112,7 @@ const App: React.FC = () => {
   const setAiPersona = useCallback((value: React.SetStateAction<AIPersona>) => setAppData(prev => ({...prev, aiPersona: typeof value === 'function' ? value(prev.aiPersona) : value })), []);
   const setAiProtocols = useCallback((value: React.SetStateAction<AIProtocol[]>) => setAppData(prev => ({...prev, aiProtocols: typeof value === 'function' ? value(prev.aiProtocols) : value })), []);
   const setAiMemory = useCallback((value: React.SetStateAction<AIMemoryItem[]>) => setAppData(prev => ({...prev, aiMemory: typeof value === 'function' ? value(prev.aiMemory) : value })), []);
+  const setChatHistory = useCallback((value: React.SetStateAction<ChatMessage[]>) => setAppData(prev => ({...prev, chatHistory: typeof value === 'function' ? value(prev.chatHistory) : value })), []);
 
 
   // Auto-save data
@@ -218,10 +224,24 @@ const App: React.FC = () => {
         return <PsychedelicNftWorkshop setPage={setPage} mintedNfts={appData.mintedNfts} setMintedNfts={setMintedNfts} />;
       case Page.PromptStudio:
         return <PromptStudio setPage={setPage} />;
-      case Page.Bib:
-        return <BibPage setPage={setPage} aiPersona={appData.aiPersona} setAiPersona={setAiPersona} aiProtocols={appData.aiProtocols} setAiProtocols={setAiProtocols} aiMemory={appData.aiMemory} setAiMemory={setAiMemory} />;
+      case Page.Persona:
+        return <PersonaPage aiPersona={appData.aiPersona} setAiPersona={setAiPersona} aiMemory={appData.aiMemory} />;
+      case Page.Learning:
+        return <LearningPage aiMemory={appData.aiMemory} setAiMemory={setAiMemory} />;
+      case Page.Protocols:
+        return <ProtocolsPage aiProtocols={appData.aiProtocols} setAiProtocols={setAiProtocols} />;
+      case Page.BusinessMeeting:
+        return <BusinessMeetingPage allData={appData} />;
       case Page.AIStudio:
         return <AIStudio setPage={setPage} vaultItems={appData.vaultItems} />;
+       case Page.Chat:
+        return <ChatPage 
+          chatHistory={appData.chatHistory}
+          setChatHistory={setChatHistory}
+          aiPersona={appData.aiPersona}
+          aiProtocols={appData.aiProtocols}
+          vaultItems={appData.vaultItems} 
+        />;
       case Page.Business:
         return <Business positions={appData.positions} setPositions={setPositions} />;
       case Page.Social:

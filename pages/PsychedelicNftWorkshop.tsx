@@ -1,8 +1,10 @@
 
+
 import React, { useState, useEffect, useRef } from 'react';
 import { GoogleGenAI, Modality } from "@google/genai";
 import { get, set } from '../utils/storage';
 import { Page, MintedNft } from '../types';
+// FIX: Use relative paths for local modules
 import { SpinnerIcon, CodeIcon, TrashIcon } from '../components/icons/Icons';
 import ConfirmationDialog from '../components/ConfirmationDialog';
 
@@ -329,162 +331,127 @@ const PsychedelicNftWorkshop: React.FC<{ setPage: (page: Page) => void; mintedNf
                                         className="absolute -top-1 -right-1 bg-red-600 rounded-full p-0.5 text-white hover:bg-red-500 transition-colors"
                                         aria-label="Remove concept image"
                                     >
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                                     </button>
                                 </div>
                             )}
                         </div>
 
-                        <div className="mt-4">
-                            <div className="flex gap-2">
-                                <input
-                                    type="text"
-                                    value={currentPrompt}
-                                    onChange={(e) => setCurrentPrompt(e.target.value)}
-                                    onKeyPress={(e) => e.key === 'Enter' && handleAddPrompt()}
-                                    placeholder="Add a keyword or phrase..."
-                                    className="flex-grow bg-gray-900/70 border border-white/10 rounded-md p-2 text-white font-mono text-sm focus:ring-2 focus:ring-fuchsia-500 focus:outline-none"
-                                />
-                                <button onClick={handleAddPrompt} className="bg-gray-700 hover:bg-gray-600 text-white font-bold p-2 rounded-md transition-colors text-sm">Add</button>
-                            </div>
-                            <div className="flex flex-wrap gap-2 mt-2">
-                                {prompts.map(p => (
-                                    <div key={p} className="bg-fuchsia-800/50 text-fuchsia-200 text-xs font-semibold px-2 py-1 rounded-full flex items-center gap-2">
-                                        <span>{p}</span>
-                                        <button onClick={() => handleRemovePrompt(p)} className="text-fuchsia-300 hover:text-white">&times;</button>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-
-                    </div>
-
-                    <div className="space-y-4">
-                        <h2 className="text-xl font-semibold text-white">2. Enhance Your Vision</h2>
-                         <div className="space-y-3">
-                             <EffectSlider label="Saturation" value={filterValues.saturate} onChange={(e) => setSettings(s => ({...s, filterValues: { ...s.filterValues, saturate: +e.target.value }}))} unit="%" />
-                             <EffectSlider label="Contrast" value={filterValues.contrast} onChange={(e) => setSettings(s => ({...s, filterValues: { ...s.filterValues, contrast: +e.target.value }}))} unit="%" />
-                             <EffectSlider label="Brightness" value={filterValues.brightness} onChange={(e) => setSettings(s => ({...s, filterValues: { ...s.filterValues, brightness: +e.target.value }}))} unit="%" />
-                             <EffectSlider label="Hue Rotate" value={filterValues.hueRotate} max={360} onChange={(e) => setSettings(s => ({...s, filterValues: { ...s.filterValues, hueRotate: +e.target.value }}))} unit="deg" />
-                             <EffectSlider label="Blur" value={filterValues.blur} max={10} step={0.1} onChange={(e) => setSettings(s => ({...s, filterValues: { ...s.filterValues, blur: +e.target.value }}))} unit="px" />
-                        </div>
-                         <div>
-                            <h3 className="text-md font-semibold text-gray-300 mb-2">Animations</h3>
-                            <div className="flex flex-wrap gap-2">
-                                {animations.map(opt => (
-                                    <button
-                                        key={opt.name}
-                                        onClick={() => setSettings(s => ({...s, selectedAnimation: opt.class}))}
-                                        className={`px-3 py-1 text-xs font-semibold rounded-full transition-colors ${
-                                            selectedAnimation === opt.class
-                                                ? 'bg-cyan-500 text-white'
-                                                : 'bg-gray-800 hover:bg-gray-700 text-gray-300'
-                                        }`}
-                                    >
-                                        {opt.name}
+                        <form onSubmit={(e) => { e.preventDefault(); handleAddPrompt(); }} className="flex gap-2 mt-4">
+                            <input
+                                type="text"
+                                value={currentPrompt}
+                                onChange={(e) => setCurrentPrompt(e.target.value)}
+                                placeholder="Add a keyword (e.g., 'cosmic turtle')"
+                                className="flex-grow bg-gray-800/50 border border-white/10 rounded-md px-4 py-2 text-white focus:ring-2 focus:ring-cyan-500"
+                            />
+                            <button type="submit" className="bg-cyan-500/80 hover:bg-cyan-500 text-white font-bold py-2 px-4 rounded-md transition-colors whitespace-nowrap">
+                                Add
+                            </button>
+                        </form>
+                        <div className="flex flex-wrap gap-2 mt-2">
+                            {prompts.map(p => (
+                                <div key={p} className="bg-fuchsia-900/50 text-fuchsia-300 text-sm font-semibold px-3 py-1 rounded-full flex items-center gap-2">
+                                    {p}
+                                    <button onClick={() => handleRemovePrompt(p)} className="text-fuchsia-400 hover:text-white">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" /></svg>
                                     </button>
-                                ))}
-                            </div>
+                                </div>
+                            ))}
                         </div>
                     </div>
 
                     <div>
-                        <button
-                            onClick={handleGenerateImage}
-                            disabled={isLoading}
-                            className="w-full bg-fuchsia-500/80 hover:bg-fuchsia-500 disabled:bg-gray-600 text-white font-bold py-3 px-4 rounded-md transition-colors flex items-center justify-center gap-2"
-                        >
-                            {isLoading ? <><SpinnerIcon className="w-5 h-5" />Generating...</> : 'Generate Masterpiece'}
-                        </button>
-                        {error && <p className="text-red-400 text-center text-sm mt-2">{error}</p>}
+                        <h2 className="text-xl font-semibold text-white">2. Apply Visual Effects</h2>
+                        <div className="mt-4 space-y-3">
+                            <EffectSlider label="Saturation" value={filterValues.saturate} onChange={(e) => setSettings(s => ({ ...s, filterValues: { ...s.filterValues, saturate: +e.target.value } }))} unit="%" />
+                            <EffectSlider label="Contrast" value={filterValues.contrast} onChange={(e) => setSettings(s => ({ ...s, filterValues: { ...s.filterValues, contrast: +e.target.value } }))} unit="%" />
+                            <EffectSlider label="Hue" value={filterValues.hueRotate} onChange={(e) => setSettings(s => ({ ...s, filterValues: { ...s.filterValues, hueRotate: +e.target.value } }))} min={0} max={360} unit="deg" />
+                            <EffectSlider label="Blur" value={filterValues.blur} onChange={(e) => setSettings(s => ({ ...s, filterValues: { ...s.filterValues, blur: +e.target.value } }))} max={10} step={0.1} unit="px" />
+                            <EffectSlider label="Brightness" value={filterValues.brightness} onChange={(e) => setSettings(s => ({ ...s, filterValues: { ...s.filterValues, brightness: +e.target.value } }))} max={200} unit="%" />
+                        </div>
                     </div>
+                     <div>
+                        <h2 className="text-xl font-semibold text-white">3. Add Animation</h2>
+                         <div className="grid grid-cols-2 gap-2 mt-4">
+                            {animations.map(anim => (
+                                <button key={anim.name} onClick={() => setSettings(s => ({...s, selectedAnimation: anim.class}))} className={`py-2 text-sm font-semibold rounded-md transition-colors ${selectedAnimation === anim.class ? 'bg-cyan-500 text-white' : 'bg-gray-800/50 hover:bg-gray-700'}`}>
+                                    {anim.name}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    <button
+                        onClick={handleGenerateImage}
+                        disabled={isLoading}
+                        className="w-full bg-fuchsia-500/80 hover:bg-fuchsia-500 disabled:bg-gray-600 text-white font-bold py-3 px-4 rounded-md transition-colors flex items-center justify-center gap-2"
+                    >
+                        {isLoading ? (
+                            <>
+                                <SpinnerIcon className="w-5 h-5" />
+                                Generating Vision...
+                            </>
+                        ) : (
+                            'Generate Masterpiece'
+                        )}
+                    </button>
+                    {error && <p className="text-red-400 text-center text-sm">{error}</p>}
                 </div>
 
-                {/* Display & Mint */}
-                <div className="bg-gray-900/50 border border-white/10 rounded-lg p-6 space-y-4 min-h-[400px] flex flex-col justify-between">
-                    <div>
-                        <h2 className="text-xl font-semibold text-white">3. Mint Your Creation</h2>
-                        <div className="mt-4 aspect-square w-full bg-black/30 rounded-lg flex items-center justify-center overflow-hidden border border-white/10">
-                            {isLoading && <SpinnerIcon className="w-12 h-12 text-fuchsia-400" />}
-                            {!isLoading && generatedImage && (
-                                <div className={`w-full h-full flex items-center justify-center ${selectedAnimation}`}>
-                                    <img 
-                                        ref={imageRef} 
-                                        crossOrigin="anonymous" 
-                                        src={generatedImage} 
-                                        alt="Generated NFT artwork" 
-                                        className={`w-full h-full object-contain animate-pop-in`}
-                                        style={{ filter: filterStyleString }}
-                                    />
-                                </div>
-                            )}
-                            {!isLoading && !generatedImage && (
-                                <p className="text-gray-500 px-8 text-center">Your generated artwork will appear here.</p>
-                            )}
-                        </div>
-                    </div>
-                    <div>
-                        {generatedImage && !isMinting && !mintSuccess && (
-                             <button
+                {/* Preview */}
+                <div className="bg-gray-900/50 border border-white/10 rounded-lg p-6 flex flex-col items-center justify-center min-h-[50vh]">
+                    {generatedImage ? (
+                        <div className="w-full space-y-4 animate-pop-in">
+                            <div className={`aspect-square w-full rounded-lg overflow-hidden glow-shadow ${selectedAnimation}`}>
+                                 <img ref={imageRef} src={generatedImage} alt="Generated NFT" className="w-full h-full object-cover" style={{ filter: filterStyleString }} />
+                            </div>
+                           
+                            <button
                                 onClick={handleMint}
-                                className="w-full bg-cyan-500/80 hover:bg-cyan-500 text-white font-bold py-3 px-4 rounded-md transition-colors flex items-center justify-center gap-2 mt-4"
+                                disabled={isMinting || mintSuccess}
+                                className="w-full bg-green-600/80 hover:bg-green-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-bold py-3 px-4 rounded-md transition-colors flex items-center justify-center gap-2"
                             >
-                                Mint to Gallery
+                                {isMinting ? <><SpinnerIcon className="w-5 h-5" />Minting...</> : mintSuccess ? '✓ Minted!' : 'Mint to ProFolio'}
                             </button>
-                        )}
-                         {isMinting && (
-                             <div className="w-full text-center text-gray-400 py-3 px-4 rounded-md transition-colors flex items-center justify-center gap-2 mt-4">
-                                <SpinnerIcon className="w-5 h-5" /> Minting to your collection...
-                            </div>
-                        )}
-                        {mintSuccess && (
-                            <div className="w-full text-center bg-green-800/50 border border-green-500 text-green-300 font-semibold py-3 px-4 rounded-md mt-4 animate-pop-in">
-                                ✓ Successfully Minted!
-                            </div>
-                        )}
-                    </div>
+                        </div>
+                    ) : (
+                        <div className="text-center text-gray-500">
+                            <p>Your generated masterpiece will appear here.</p>
+                        </div>
+                    )}
                 </div>
             </div>
 
-            {/* Gallery */}
+             {/* Minted Gallery */}
             <div className="bg-gray-900/50 border border-white/10 rounded-lg p-6">
                 <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-2xl font-semibold text-white">Your Minted Collection</h2>
-                    {mintedNfts.length > 0 && (
+                    <h2 className="text-xl font-semibold text-white">Minted Collection</h2>
+                     {mintedNfts.length > 0 && (
                         <button onClick={() => setShowClearAllDialog(true)} className="flex items-center gap-1 text-sm text-gray-400 hover:text-red-400 transition-colors">
                             <TrashIcon className="w-4 h-4" /> Clear All
                         </button>
                     )}
                 </div>
                 {mintedNfts.length > 0 ? (
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
                         {mintedNfts.map(nft => (
-                            <div key={nft.id} className="aspect-square bg-black/20 rounded-lg overflow-hidden border border-transparent hover:border-cyan-400/50 transition-all duration-300 group relative glow-shadow">
-                                <div className={`w-full h-full ${nft.animationClass || ''}`}>
-                                    <img src={nft.imageUrl} alt={nft.prompt} className="w-full h-full object-cover" />
+                             <div key={nft.id} className="group relative aspect-square">
+                                <img src={nft.imageUrl} alt={nft.prompt} className={`w-full h-full object-cover rounded-md ${nft.animationClass || ''}`} />
+                                <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                     <button onClick={() => setNftToDelete(nft)} className="p-2 bg-red-600/80 rounded-full text-white"><TrashIcon className="w-5 h-5" /></button>
                                 </div>
-                                <div className="absolute inset-0 bg-black/70 p-2 text-xs text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity overflow-y-auto">
-                                    <p className="font-mono">{nft.prompt}</p>
-                                </div>
-                                 <button
-                                    onClick={() => setNftToDelete(nft)}
-                                    className="absolute top-2 right-2 p-2 bg-gray-800/80 rounded-full text-gray-300 hover:text-white hover:bg-red-600/80 transition-colors opacity-0 group-hover:opacity-100"
-                                    aria-label="Delete NFT"
-                                >
-                                    <TrashIcon className="w-4 h-4" />
-                                </button>
                             </div>
                         ))}
                     </div>
                 ) : (
-                    <p className="text-gray-500 text-center py-8">Your gallery is empty. Generate and mint your first NFT to start your collection!</p>
+                    <p className="text-sm text-center text-gray-500 py-8">Your minted NFTs will be displayed here.</p>
                 )}
             </div>
-            
-            <ConfirmationDialog
+             <ConfirmationDialog
                 isOpen={!!nftToDelete}
                 title="Delete NFT"
-                message="Are you sure you want to permanently delete this NFT from your collection?"
+                message="Are you sure you want to delete this minted NFT? This action cannot be undone."
                 onConfirm={handleConfirmDelete}
                 onCancel={() => setNftToDelete(null)}
                 confirmText="Delete"
@@ -492,7 +459,7 @@ const PsychedelicNftWorkshop: React.FC<{ setPage: (page: Page) => void; mintedNf
             <ConfirmationDialog
                 isOpen={showClearAllDialog}
                 title="Clear Entire Collection"
-                message="Are you sure you want to delete ALL minted NFTs? This action cannot be undone."
+                message="Are you sure you want to delete ALL minted NFTs from the workshop? This action cannot be undone."
                 onConfirm={handleConfirmClearAll}
                 onCancel={() => setShowClearAllDialog(false)}
                 confirmText="Clear All"

@@ -1,9 +1,11 @@
 
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { Asset, CryptoCurrency, AssetCategory, cryptoAssetTypes } from '../types';
 import AssetCard from '../components/AssetCard';
 import AssetForm from '../components/AssetForm';
 import ConfirmationDialog from '../components/ConfirmationDialog';
+// FIX: Use relative paths for local modules
 import { CategoryIcon } from '../components/icons/Icons';
 import { get, set } from '../utils/storage';
 

@@ -1,4 +1,5 @@
 
+
 import React, { useState, useMemo, useCallback } from 'react';
 // FIX: Use relative paths for local modules
 import { VaultItem, VaultItemType } from '../types';

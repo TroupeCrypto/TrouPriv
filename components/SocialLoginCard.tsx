@@ -1,6 +1,8 @@
 
+
 import React, { useState } from 'react';
 import { BrandAuthConfig, SocialPlatform } from '../types';
+// FIX: Use relative paths for local modules
 import { SocialIcon, SpinnerIcon } from './icons/Icons';
 
 interface Props {

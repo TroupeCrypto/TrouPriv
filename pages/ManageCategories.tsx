@@ -1,5 +1,7 @@
+
 import React, { useState, useMemo } from 'react';
 import { AssetCategory, Page } from '../types';
+// FIX: Use relative paths for local modules
 import { TrashIcon } from '../components/icons/Icons';
 
 interface ManageCategoriesProps {
