@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { ethers } from 'ethers';
 import { Web3Wallet, VaultItem } from '../types';
 import { WalletIcon, KeyIcon, SpinnerIcon } from '../components/icons/Icons';
 import { useVault } from '../contexts/VaultContext';
@@ -13,17 +14,37 @@ const WalletPage: React.FC<WalletPageProps> = ({ web3Wallet, setWeb3Wallet }) =>
     const [isConnecting, setIsConnecting] = useState(false);
     const { decryptedItems } = useVault(); // To show keys related to wallet if any
 
-    const handleConnect = () => {
+    const handleConnect = async () => {
+        if (typeof window.ethereum === 'undefined') {
+            alert('MetaMask is not installed. Please install it to use this feature.');
+            return;
+        }
+
         setIsConnecting(true);
-        // Simulate a wallet connection process like MetaMask
-        setTimeout(() => {
+        try {
+            const provider = new ethers.BrowserProvider(window.ethereum);
+            
+            // Request account access which also prompts the user to connect
+            await provider.send("eth_requestAccounts", []);
+            
+            const signer = await provider.getSigner();
+            const address = await signer.getAddress();
+            const balanceWei = await provider.getBalance(address);
+            const balanceEth = ethers.formatEther(balanceWei);
+            const network = await provider.getNetwork();
+
             setWeb3Wallet({
-                address: `0x${[...Array(40)].map(() => Math.floor(Math.random() * 16).toString(16)).join('')}`,
-                balance: Math.random() * 10,
-                network: 'Ethereum Mainnet (Simulated)'
+                address: address,
+                balance: parseFloat(balanceEth),
+                network: network.name,
             });
+        } catch (error: any) {
+            console.error("Failed to connect wallet:", error);
+            const errorMessage = error.reason || error.message || "An unknown error occurred.";
+            alert(`Failed to connect wallet. ${errorMessage}`);
+        } finally {
             setIsConnecting(false);
-        }, 1500);
+        }
     };
 
     const handleDisconnect = () => {

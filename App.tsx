@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 // FIX: Added AIPersona, AIProtocol, AIMemoryItem to import
 import { Page, Asset, CryptoCurrency, VaultItem, Alert, Profile, AppSettings, PortfolioHistoryPoint, cryptoAssetTypes, AssetCategory, MintedNft, AppData, Position, Web3Wallet, DeploymentTransaction, BrandAuthConfig, AIPersona, AIProtocol, AIMemoryItem, ChatMessage } from './types';
@@ -196,6 +197,40 @@ const App: React.FC = () => {
       set('portfolioHistory', newHistory);
     }
   }, [appData.assets, appData.cryptoCurrencies, portfolioHistory]);
+
+  // Effect for handling wallet events
+  useEffect(() => {
+    const handleAccountsChanged = (accounts: string[]) => {
+      if (accounts.length === 0) {
+        // MetaMask is locked or the user has disconnected all accounts.
+        console.log('Wallet disconnected.');
+        setWeb3Wallet(null);
+      } else if (appData.web3Wallet && accounts[0] !== appData.web3Wallet.address) {
+        // A different account was selected. We'll disconnect and the user can reconnect.
+        console.log('Account changed. Disconnecting for user to reconnect.');
+        setWeb3Wallet(null);
+      }
+    };
+
+    // As per EIP-1193, it's recommended to reload the page on chain change.
+    // This is the simplest way to ensure state consistency.
+    const handleChainChanged = () => {
+      console.log('Network changed. Reloading page for consistency.');
+      window.location.reload();
+    };
+
+    if (window.ethereum?.on) {
+      window.ethereum.on('accountsChanged', handleAccountsChanged);
+      window.ethereum.on('chainChanged', handleChainChanged);
+    }
+
+    return () => {
+      if (window.ethereum?.removeListener) {
+        window.ethereum.removeListener('accountsChanged', handleAccountsChanged);
+        window.ethereum.removeListener('chainChanged', handleChainChanged);
+      }
+    };
+  }, [appData.web3Wallet, setWeb3Wallet]);
 
 
   const renderPage = () => {
