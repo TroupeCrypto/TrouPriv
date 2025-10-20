@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { GoogleGenAI } from "@google/genai";
 import { AppData } from '../types';
@@ -58,7 +59,7 @@ const BusinessMeetingPage: React.FC<BusinessMeetingPageProps> = ({ allData }) =>
             const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
             const response = await ai.models.generateContent({
               model: 'gemini-2.5-flash',
-              contents: generatePrompt,
+              contents: { parts: [{ text: generatePrompt }] },
             });
             setReportContent(response.text);
         } catch (err) {

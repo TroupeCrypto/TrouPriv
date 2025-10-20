@@ -15,15 +15,79 @@ interface VaultPageProps {
   setVaultItems: React.Dispatch<React.SetStateAction<VaultItem[]>>;
 }
 
+const commonInputStyle = "w-full bg-gray-800/50 border border-white/10 rounded-md px-4 py-2 text-white focus:ring-2 focus:ring-fuchsia-500 focus:outline-none";
+
+const SetupVaultForm: React.FC = () => {
+    const { setInitialMasterPassword, isSettingInitialPassword } = useMasterPassword();
+    const [password, setPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [error, setError] = useState('');
+
+    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        setError('');
+        if (password.length < 8) {
+            setError("Password must be at least 8 characters long.");
+            return;
+        }
+        if (password !== confirmPassword) {
+            setError("Passwords do not match.");
+            return;
+        }
+        
+        try {
+            await setInitialMasterPassword(password);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : "Failed to create vault. Please try again.");
+        }
+    };
+
+    return (
+      <div className="max-w-md mx-auto text-center p-8 bg-gray-900/50 border border-white/10 rounded-lg">
+        <VaultIcon className="w-12 h-12 mx-auto text-cyan-400" />
+        <h2 className="text-2xl font-bold mt-4">Create Your Vault</h2>
+        <p className="text-gray-400 mt-2">Set a strong master password to encrypt your sensitive data.</p>
+        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+          <input
+            type="password"
+            name="password"
+            placeholder="New Master Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className={commonInputStyle}
+            required
+            disabled={isSettingInitialPassword}
+          />
+          <input
+            type="password"
+            name="confirm_password"
+            placeholder="Confirm Master Password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            className={commonInputStyle}
+            required
+            disabled={isSettingInitialPassword}
+          />
+          {error && <p className="text-red-400 text-sm">{error}</p>}
+          <button type="submit" disabled={isSettingInitialPassword} className="w-full bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-2 px-4 rounded-md transition-colors disabled:bg-gray-600">
+            {isSettingInitialPassword ? 'Creating...' : 'Create Vault'}
+          </button>
+        </form>
+      </div>
+    );
+};
+
+
 const VaultPage: React.FC<VaultPageProps> = ({ vaultItems, setVaultItems }) => {
-    const { decryptedItems } = useVault();
+    const { decryptedItems, failedItems, decryptionError } = useVault();
     const {
         isUnlocked,
+        isVaultConfigured,
         isVerifying,
         verificationError,
         verifyAndSetPassword,
         clearPassword,
-        masterPassword
+        masterPassword,
     } = useMasterPassword();
     
     const [showNewItemForm, setShowNewItemForm] = useState(false);
@@ -45,13 +109,13 @@ const VaultPage: React.FC<VaultPageProps> = ({ vaultItems, setVaultItems }) => {
         const form = e.currentTarget;
         const passwordInput = form.elements.namedItem('password') as HTMLInputElement;
         if (passwordInput) {
-            const success = await verifyAndSetPassword(passwordInput.value, vaultItems);
+            const success = await verifyAndSetPassword(passwordInput.value);
             if (!success) {
                 // Clear password only on failure for better UX
                 passwordInput.value = '';
             }
         }
-    }, [verifyAndSetPassword, vaultItems]);
+    }, [verifyAndSetPassword]);
 
     const handleLock = () => {
         clearPassword();
@@ -140,8 +204,8 @@ const VaultPage: React.FC<VaultPageProps> = ({ vaultItems, setVaultItems }) => {
     
     const handleConfirmDelete = () => {
         if (itemToDelete) {
-            const newVaultItems = vaultItems.filter(item => item.id !== itemToDelete.id);
-            setVaultItems(newVaultItems);
+            const idToDelete = itemToDelete.id;
+            setVaultItems(prevItems => prevItems.filter(item => item.id !== idToDelete));
             setItemToDelete(null);
         }
     };
@@ -180,8 +244,6 @@ const VaultPage: React.FC<VaultPageProps> = ({ vaultItems, setVaultItems }) => {
             generalSecrets 
         };
     }, [decryptedItems]);
-
-    const commonInputStyle = "w-full bg-gray-800/50 border border-white/10 rounded-md px-4 py-2 text-white focus:ring-2 focus:ring-fuchsia-500 focus:outline-none";
 
     const renderItemContent = (item: DecryptedVaultItem) => {
         const isVisible = !!visibility[item.id];
@@ -248,6 +310,9 @@ const VaultPage: React.FC<VaultPageProps> = ({ vaultItems, setVaultItems }) => {
       return url;
     };
 
+    if (!isVaultConfigured) {
+        return <SetupVaultForm />;
+    }
 
     if (!isUnlocked) {
         return (
@@ -286,6 +351,12 @@ const VaultPage: React.FC<VaultPageProps> = ({ vaultItems, setVaultItems }) => {
                     </button>
                 </div>
             </div>
+
+            {decryptionError && (
+                 <div className="p-3 bg-yellow-900/30 border border-yellow-500/30 rounded-md text-yellow-300 text-sm">
+                    {decryptionError}
+                </div>
+            )}
 
             {showNewItemForm && (
                 <form onSubmit={handleAddItem} className="p-6 bg-gray-900/50 border border-white/10 rounded-lg space-y-4 animate-fade-in">
@@ -342,7 +413,7 @@ const VaultPage: React.FC<VaultPageProps> = ({ vaultItems, setVaultItems }) => {
                 </form>
             )}
 
-            {decryptedItems.length === 0 && !showNewItemForm && (
+            {decryptedItems.length === 0 && failedItems.length === 0 && !showNewItemForm && (
                 <div className="text-center py-16 text-gray-500">
                     <p>Your vault is empty.</p>
                     <p>Click "+ New Item" to add your first secret.</p>
@@ -431,6 +502,30 @@ const VaultPage: React.FC<VaultPageProps> = ({ vaultItems, setVaultItems }) => {
                                     </div>
                                 </div>
                                 {renderItemContent(item)}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {failedItems.length > 0 && (
+                <div className="space-y-4">
+                    <h3 className="text-xl font-semibold text-yellow-300 border-b border-yellow-400/20 pb-2">Undecrypted Items</h3>
+                    <div className="space-y-2">
+                        {failedItems.map(item => (
+                             <div key={item.id} className="bg-gray-800/50 p-4 rounded-lg opacity-60" title="Decryption failed. This might be a placeholder or was encrypted with a different password.">
+                                <div className="flex justify-between items-start">
+                                    <div className="flex items-center gap-2">
+                                        <VaultIcon className="w-5 h-5 text-gray-500" />
+                                        <p className="font-semibold text-gray-400">{item.name}</p>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-gray-500">
+                                        <button onClick={() => openDeleteConfirmation(item.id)} className="hover:text-red-500"><TrashIcon className="w-4 h-4" /></button>
+                                    </div>
+                                </div>
+                                 <div className="mt-2 pl-7 text-gray-500 font-mono text-sm">
+                                    •••••••••••••••• (LOCKED)
+                                </div>
                             </div>
                         ))}
                     </div>

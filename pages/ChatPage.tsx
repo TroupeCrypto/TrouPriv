@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { GoogleGenAI } from "@google/genai";
 import { ChatMessage, AIPersona, AIProtocol, VaultItem } from '../types';
@@ -60,7 +61,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ chatHistory, setChatHistory, aiPers
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         const prompt = `Classify the following user prompt into one of these categories: "Conceptualization & Building", "Planning & Coding", "Styling & Design". Respond with only the category name. Prompt: "${userPrompt}"`;
         try {
-            const response = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: prompt });
+            const response = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: { parts: [{ text: prompt }] } });
             const category = response.text.trim().toLowerCase();
             
             if (category.includes('planning') || category.includes('coding')) {

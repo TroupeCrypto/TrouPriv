@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Page, AIPersona, AIProtocol, AIMemoryItem, AITrait } from '../types';
 import { BrainCircuitIcon, TrashIcon, EditIcon, FileTextIcon } from '../components/icons/Icons';

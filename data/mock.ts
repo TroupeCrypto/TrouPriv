@@ -17,7 +17,22 @@ export const initialCryptoCurrencies: CryptoCurrency[] = [
   { id: 'solana', symbol: 'SOL', name: 'Solana', price: 150, change24h: 5.3, priceHistory: [], isFavorite: false },
 ];
 
-export const initialVaultItems: VaultItem[] = [];
+export const initialVaultItems: VaultItem[] = [
+    {
+        id: 'mock-openai-key-1',
+        name: 'OpenAI API Key (Test)',
+        type: 'apiKey',
+        website: 'openai.com',
+        encryptedContent: '{"iv":"m+FcNSaWfsnL2c7t","salt":"mE/2G3u3J4TzP5q8a+X29w==","ciphertext":"B3P7yQ=="}'
+    },
+    {
+        id: 'mock-anthropic-key-1',
+        name: 'Anthropic API Key (Test)',
+        type: 'apiKey',
+        website: 'anthropic.com',
+        encryptedContent: '{"iv":"Z+Q5b3jM1B6t9s2E","salt":"E8p/r5B+T6y/X9K/C2H5fA==","ciphertext":"B3P7yQ=="}'
+    }
+];
 
 export const initialAlerts: Alert[] = [];
 

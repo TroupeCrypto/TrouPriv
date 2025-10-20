@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect } from 'react';
 import { GoogleGenAI, Type } from "@google/genai";
 // FIX: Use relative paths for local modules
@@ -75,7 +74,7 @@ const PromptStudio: React.FC<{ setPage: (page: Page) => void }> = ({ setPage }) 
             const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
             const result = await ai.models.generateContent({
               model: 'gemini-2.5-flash',
-              contents: prompt
+              contents: { parts: [{ text: prompt }] }
             });
             const newResponse = result.text;
             setResponse(newResponse);

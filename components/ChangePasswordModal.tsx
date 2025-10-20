@@ -1,17 +1,18 @@
+
 import React, { useState } from 'react';
-import { VaultItem } from '../types';
+import { AppData } from '../types';
 import { useMasterPassword } from '../contexts/MasterPasswordContext';
 import { SpinnerIcon } from './icons/Icons';
 
 interface ChangePasswordModalProps {
   isOpen: boolean;
   onClose: () => void;
-  vaultItems: VaultItem[];
-  setVaultItems: React.Dispatch<React.SetStateAction<VaultItem[]>>;
+  appData: Omit<AppData, 'schemaVersion'>;
+  setAppData: React.Dispatch<React.SetStateAction<Omit<AppData, 'schemaVersion'>>>;
 }
 
-const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen, onClose, vaultItems, setVaultItems }) => {
-    const { masterPassword, reEncryptAndSetNewPassword, clearPassword } = useMasterPassword();
+const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen, onClose, appData, setAppData }) => {
+    const { masterPassword, changeMasterPassword, clearPassword } = useMasterPassword();
     const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -57,19 +58,15 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen, onClo
         setIsProcessing(true);
 
         try {
-            // Re-encrypt all items and get the new encrypted items back
-            const reEncryptedItems = await reEncryptAndSetNewPassword(currentPassword, newPassword, vaultItems);
+            // Pass setAppData directly; the function now handles getting the latest appData internally.
+            await changeMasterPassword(currentPassword, newPassword, appData, setAppData);
             
-            // Update the application's master state with the newly encrypted data
-            setVaultItems(reEncryptedItems);
-            
-            // The context handles setting the new password for the session automatically
             setSuccess("Master password changed successfully!");
             setTimeout(handleClose, 2000);
 
         } catch (err) {
             console.error("Password change failed:", err);
-            setError("An unexpected error occurred during re-encryption. Your password has not been changed.");
+            setError(err instanceof Error ? err.message : "An unexpected error occurred. Your password has not been changed.");
             setIsProcessing(false);
             // If re-encryption fails, it's safer to lock the vault to force re-authentication
             clearPassword();

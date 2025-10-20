@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { AppSettings, Page, VaultItem } from '../types';
+import { AppSettings, Page, AppData } from '../types';
 import { SettingsIcon, KeyIcon } from '../components/icons/Icons';
 import { useMasterPassword } from '../contexts/MasterPasswordContext';
 import ChangePasswordModal from '../components/ChangePasswordModal';
@@ -8,11 +8,11 @@ interface SettingsPageProps {
     settings: AppSettings;
     setSettings: React.Dispatch<React.SetStateAction<AppSettings>>;
     setPage: (page: Page) => void;
-    vaultItems: VaultItem[];
-    setVaultItems: React.Dispatch<React.SetStateAction<VaultItem[]>>;
+    appData: Omit<AppData, 'schemaVersion'>;
+    setAppData: React.Dispatch<React.SetStateAction<Omit<AppData, 'schemaVersion'>>>;
 }
 
-const SettingsPage: React.FC<SettingsPageProps> = ({ settings, setSettings, setPage, vaultItems, setVaultItems }) => {
+const SettingsPage: React.FC<SettingsPageProps> = ({ settings, setSettings, setPage, appData, setAppData }) => {
     const { isUnlocked } = useMasterPassword();
     const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] = useState(false);
 
@@ -93,8 +93,8 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ settings, setSettings, setP
             <ChangePasswordModal 
                 isOpen={isChangePasswordModalOpen}
                 onClose={() => setIsChangePasswordModalOpen(false)}
-                vaultItems={vaultItems}
-                setVaultItems={setVaultItems}
+                appData={appData}
+                setAppData={setAppData}
             />
         </div>
     );

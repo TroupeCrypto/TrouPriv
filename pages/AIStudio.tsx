@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { GoogleGenAI } from "@google/genai";
 import { Page, VaultItem } from '../types';
@@ -28,6 +29,13 @@ interface AIHistoryItem {
     prompt: string;
     response: string;
 }
+
+// FIX: Added modelInfo to provide icon and color data for history items.
+const modelInfo: Record<ProviderID, { Icon: React.FC<{className?: string}>, color: string }> = {
+    gemini: { Icon: SparklesIcon, color: 'fuchsia' },
+    openai: { Icon: OpenAIIcon, color: 'cyan' },
+    anthropic: { Icon: AnthropicIcon, color: 'amber' },
+};
 
 const initialProviders: Record<ProviderID, ProviderState> = {
     gemini: {
@@ -231,16 +239,16 @@ const AIStudio: React.FC<AIStudioProps> = ({ setPage, vaultItems }) => {
         decryptedItems.forEach(item => {
             if (item.type === 'apiKey' && typeof item.decryptedContent === 'object' && item.decryptedContent && 'key' in item.decryptedContent) {
                 const keyContent = (item.decryptedContent as {key: string}).key;
-                const name = item.name.toLowerCase();
+                const name = item.name.toUpperCase();
                 const website = item.website?.toLowerCase() || '';
 
-                if (name.includes('gemini') || name.includes('google') || website.includes('google') || website.includes('aistudio')) {
+                if (name.includes('GEMINI') || name.includes('GOOGLE') || website.includes('google') || website.includes('aistudio')) {
                     keys.gemini = keyContent;
                 }
-                if (name.includes('openai') || website.includes('openai')) {
+                if (name.includes('OPEN_AI') || website.includes('openai')) {
                     keys.openai = keyContent;
                 }
-                if (name.includes('anthropic') || website.includes('anthropic')) {
+                if (name.includes('ANTHROPIC_AI') || website.includes('anthropic')) {
                     keys.anthropic = keyContent;
                 }
             }
@@ -255,12 +263,12 @@ const AIStudio: React.FC<AIStudioProps> = ({ setPage, vaultItems }) => {
         const form = e.currentTarget;
         const passwordInput = form.elements.namedItem('password') as HTMLInputElement;
         if (passwordInput) {
-            const success = await verifyAndSetPassword(passwordInput.value, vaultItems);
+            const success = await verifyAndSetPassword(passwordInput.value);
             if (!success) {
                 passwordInput.value = '';
             }
         }
-    }, [verifyAndSetPassword, vaultItems]);
+    }, [verifyAndSetPassword]);
 
     const updateProviderState = useCallback((id: ProviderID, update: Partial<ProviderState>) => {
         setProviders(prev => ({
@@ -393,7 +401,6 @@ const AIStudio: React.FC<AIStudioProps> = ({ setPage, vaultItems }) => {
                     <BibIcon className="w-8 h-8 text-cyan-400" />
                     <div>
                         <h1 className="text-3xl font-bold text-white">AI Studio</h1>
-                        {/* FIX: Changed Page.Bib to Page.Persona as Page.Bib does not exist in the enum. */}
                         <button onClick={() => setPage(Page.Persona)} className="text-sm text-cyan-400 hover:underline">&larr; Back to BiB!</button>
                     </div>
                 </div>
@@ -423,90 +430,93 @@ const AIStudio: React.FC<AIStudioProps> = ({ setPage, vaultItems }) => {
                         <button
                             type="submit"
                             disabled={isVerifying}
-                            className="w-full sm:w-auto bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-2 px-4 rounded-md transition-colors disabled:bg-gray-600 flex items-center justify-center gap-2"
+                            className="w-full sm:w-auto bg-cyan-500 hover:bg-cyan-600 disabled:bg-gray-700 text-white font-bold py-2 px-4 rounded-md transition-colors flex items-center justify-center"
                         >
-                            {isVerifying ? <SpinnerIcon className="w-5 h-5" /> : 'Unlock & Load Keys'}
+                            {isVerifying ? <SpinnerIcon className="w-5 h-5"/> : 'Unlock & Load'}
                         </button>
                     </form>
                 </div>
             )}
-
-            <div className="bg-gray-900/50 border border-white/10 rounded-lg p-4">
-                <h2 className="text-lg font-semibold text-white mb-2">Universal Prompter</h2>
+            
+            <div className="bg-gray-900/50 border border-white/10 rounded-lg p-4 space-y-2">
+                <h2 className="text-lg font-semibold text-white">Universal Prompt</h2>
                 <textarea
                     value={universalPrompt}
                     onChange={e => setUniversalPrompt(e.target.value)}
-                    placeholder="Send a prompt to all available providers at once..."
-                    className="w-full h-28 bg-gray-800/50 border border-white/10 rounded-md p-4 text-white font-mono text-sm focus:ring-2 focus:ring-fuchsia-500 focus:outline-none resize-y"
+                    placeholder="Send the same prompt to all available models..."
+                    rows={3}
+                    className="w-full bg-gray-800/50 border border-white/10 rounded-md p-2 text-white font-mono text-sm focus:ring-2 focus:ring-fuchsia-500 focus:outline-none resize-y"
                 />
                 <button
                     onClick={handleSendUniversal}
-                    className="mt-2 w-full bg-fuchsia-500/80 hover:bg-fuchsia-500 text-white font-bold py-2 px-4 rounded-md transition-colors"
+                    className="w-full bg-fuchsia-600 hover:bg-fuchsia-500 text-white font-bold py-2 px-4 rounded-md transition-colors"
                 >
                     Send to All
                 </button>
             </div>
 
-            <div className="bg-gray-900/50 border border-white/10 rounded-lg p-4">
-                <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-lg font-semibold text-white">History</h2>
-                    {history.length > 0 && (
-                        <button onClick={handleClearHistory} className="text-xs text-gray-400 hover:text-red-400 transition-colors flex items-center gap-1">
-                            <TrashIcon className="w-3 h-3" /> Clear All
-                        </button>
-                    )}
-                </div>
-                <input
-                    type="text"
-                    value={historySearchTerm}
-                    onChange={(e) => setHistorySearchTerm(e.target.value)}
-                    placeholder="Search history..."
-                    className="w-full bg-gray-800/50 border border-white/10 rounded-md px-4 py-2 text-white focus:ring-2 focus:ring-fuchsia-500 focus:outline-none mb-4"
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <AiProviderCard 
+                    provider={providers.gemini}
+                    setProviderState={update => updateProviderState('gemini', update)}
+                    onSend={callApi}
+                    isKeyFromVault={!!apiKeys.gemini}
                 />
-                <div className="max-h-80 overflow-y-auto space-y-2 pr-2">
-                    {filteredHistory.length === 0 ? (
-                        <p className="text-gray-500 text-center py-8">No history found.</p>
-                    ) : (
-                        filteredHistory.map(item => {
-                            const provider = providers[item.providerId];
-                            return (
-                                <div key={item.id} className="bg-gray-800/50 p-3 rounded-lg">
-                                    <div className="flex items-center gap-2 mb-2">
-                                        <provider.Icon className={`w-5 h-5 text-${provider.color}-400`} />
-                                        <p className="text-sm font-semibold text-gray-300 truncate flex-1" title={item.prompt}>{item.prompt}</p>
-                                    </div>
-                                    <div className="flex items-center justify-end gap-2">
-                                        <button onClick={() => handleLoadHistory(item)} className="text-xs bg-cyan-600 hover:bg-cyan-500 text-white font-semibold py-1 px-3 rounded-md transition-colors">
-                                            Load
-                                        </button>
-                                        <button onClick={() => handleDeleteHistory(item.id)} className="p-1 rounded-full text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-colors">
-                                            <TrashIcon className="w-4 h-4" />
-                                        </button>
-                                    </div>
-                                </div>
-                            );
-                        })
-                    )}
-                </div>
+                <AiProviderCard
+                    provider={providers.openai}
+                    setProviderState={update => updateProviderState('openai', update)}
+                    onSend={callApi}
+                    disabled={!apiKeys.openai}
+                    disabledMessage="OpenAI API Key not found in Vault."
+                    isKeyFromVault={!!apiKeys.openai}
+                />
+                <AiProviderCard
+                    provider={providers.anthropic}
+                    setProviderState={update => updateProviderState('anthropic', update)}
+                    onSend={callApi}
+                    disabled={!apiKeys.anthropic}
+                    disabledMessage="Anthropic API Key not found in Vault."
+                    isKeyFromVault={!!apiKeys.anthropic}
+                />
             </div>
             
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {Object.values(providers).map((provider: ProviderState) => {
-                    const isKeyFromVault = !!apiKeys[provider.id];
-                    const isDisabled = (provider.id !== 'gemini' && !isKeyFromVault);
-                    const disabledMessage = `Unlock vault to load the ${provider.name} API key.`;
-                    return (
-                        <AiProviderCard
-                            key={provider.id}
-                            provider={provider}
-                            setProviderState={(update) => updateProviderState(provider.id, update)}
-                            onSend={callApi}
-                            disabled={isDisabled}
-                            disabledMessage={disabledMessage}
-                            isKeyFromVault={isKeyFromVault}
+             <div className="bg-gray-900/50 border border-white/10 rounded-lg p-4">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3 gap-2">
+                    <h2 className="text-lg font-semibold text-white">History</h2>
+                    <div className="flex items-center gap-2">
+                        <input
+                            type="text"
+                            placeholder="Search history..."
+                            value={historySearchTerm}
+                            onChange={e => setHistorySearchTerm(e.target.value)}
+                            className="w-48 bg-gray-800/50 border border-white/10 rounded-md px-2 py-1 text-white text-xs focus:ring-1 focus:ring-cyan-500"
                         />
-                    )
-                })}
+                         {history.length > 0 && (
+                            <button onClick={handleClearHistory} className="text-xs text-gray-400 hover:text-red-400 transition-colors flex items-center gap-1">
+                                <TrashIcon className="w-3 h-3" /> Clear All
+                            </button>
+                        )}
+                    </div>
+                </div>
+                <div className="space-y-2 max-h-96 overflow-y-auto pr-2">
+                    {filteredHistory.length > 0 ? filteredHistory.map(item => {
+                         const model = modelInfo[item.providerId as keyof typeof modelInfo];
+                         return (
+                            <div key={item.id} className={`p-3 rounded-md bg-gray-800/50 border border-transparent hover:border-${model.color}-500/30`}>
+                                <div className="flex justify-between items-start">
+                                    <div className="flex items-center gap-2">
+                                        <model.Icon className={`w-4 h-4 text-${model.color}-400`}/>
+                                        <p className="text-sm font-semibold text-gray-300 truncate">{item.prompt}</p>
+                                    </div>
+                                    <div className="flex items-center gap-2 flex-shrink-0">
+                                        <button onClick={() => handleLoadHistory(item)} className="text-xs bg-cyan-600 hover:bg-cyan-500 text-white font-semibold py-1 px-3 rounded-md transition-colors">Load</button>
+                                        <button onClick={() => handleDeleteHistory(item.id)} className="p-1 rounded-full text-gray-500 hover:text-red-400 hover:bg-red-500/10"><TrashIcon className="w-4 h-4" /></button>
+                                    </div>
+                                </div>
+                            </div>
+                         )
+                    }) : <p className="text-sm text-gray-500 text-center py-8">No history entries found.</p>}
+                </div>
             </div>
         </div>
     );

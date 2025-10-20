@@ -207,7 +207,9 @@ const Dashboard: React.FC<DashboardProps> = ({ assets, cryptoCurrencies, setCryp
                     .join(', ')
                 : 'No assets to analyze.';
 
-            const volatileAssetsString = topMovers.map(c => `${c.name} (${c.change24h >= 0 ? '+' : ''}${c.change24h.toFixed(2)}%)`).join(', ');
+            const volatileAssetsString = topMovers.length > 0
+                ? topMovers.map(c => `${c.name} (${c.change24h >= 0 ? '+' : ''}${c.change24h.toFixed(2)}%)`).join(', ')
+                : 'No significant movers to report.';
 
             const prompt = `
                 Analyze the following portfolio snapshot. Provide a brief, insightful summary (3-4 sentences).
@@ -225,7 +227,7 @@ const Dashboard: React.FC<DashboardProps> = ({ assets, cryptoCurrencies, setCryp
             
             const response = await ai.models.generateContent({
                 model: 'gemini-2.5-flash',
-                contents: prompt,
+                contents: { parts: [{ text: prompt }] },
             });
             const insight = response.text.trim();
             setAiInsight(insight);
