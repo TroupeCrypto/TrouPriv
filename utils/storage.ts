@@ -10,7 +10,6 @@ type Wrapped<T> = {
 
 function jsonReplacer(_key: string, value: any): any {
   if (typeof value === 'number' && (!isFinite(value) || isNaN(value))) {
-    console.warn(`[Storage] Non-serializable number: ${value}. Replacing with null.`);
     return null;
   }
   if (typeof value === 'bigint') return value.toString();
@@ -46,45 +45,54 @@ export function set<T>(key: string, payload: T): boolean {
 export function get<T>(key: string, defaultValue: T): T {
   try {
     const raw = localStorage.getItem(KEY_PREFIX + key);
-    if (raw == null) return defaultValue;
+    if (!raw) {
+        // Check for legacy unwrapped key
+        const legacyRaw = localStorage.getItem(key);
+        if (legacyRaw) {
+            console.warn(`Found legacy data for key "${key}". Migrating to new format.`);
+            try {
+                const legacyParsed = JSON.parse(legacyRaw);
+                set<T>(key, legacyParsed as T);
+                localStorage.removeItem(key); // Clean up old key
+                return legacyParsed as T;
+            } catch (e) {
+                console.error(`Error parsing legacy key "${key}", removing corrupt data:`, e);
+                localStorage.removeItem(key);
+                return defaultValue;
+            }
+        }
+        return defaultValue;
+    }
 
-    // Try to parse as a wrapped object first
     const parsed = JSON.parse(raw);
-    if (
-      parsed &&
-      typeof parsed === 'object' &&
-      'payload' in parsed &&
-      'schemaVersion' in parsed
-    ) {
-      // Optional place to migrate parsed.schemaVersion -> SCHEMA_VERSION
+    
+    // Handle new wrapped format
+    if (parsed && typeof parsed === 'object' && 'payload' in parsed && 'schemaVersion' in parsed) {
+      // Future-proof: Place for schema migration logic if needed
+      // if (parsed.schemaVersion < SCHEMA_VERSION) { /* ... migrate parsed.payload ... */ }
       return (parsed as Wrapped<T>).payload;
     }
-
-    // Fallback: support legacy unwrapped payloads
-    return parsed as T;
+    
+    // Handle legacy format found under new prefixed key (should be rare)
+    if (parsed) {
+        console.warn(`Found unwrapped data for key "${KEY_PREFIX + key}". Migrating to wrapped format.`);
+        set<T>(key, parsed as T);
+        return parsed as T;
+    }
+    
+    return defaultValue;
   } catch (error) {
     console.error(`Error reading localStorage key "${key}":`, error);
-    // Last resort: try to parse legacy raw without prefix (very old builds)
-    try {
-      const legacyRaw = localStorage.getItem(key);
-      if (legacyRaw != null) {
-        const legacyParsed = JSON.parse(legacyRaw);
-        // Immediately migrate it into the wrapped form under the new key
-        set<T>(key, legacyParsed as T);
-        // Clean up legacy key to avoid future confusion
-        localStorage.removeItem(key);
-        return legacyParsed as T;
-      }
-    } catch (e) {
-      console.error(`Error reading legacy key "${key}":`, e);
-    }
     return defaultValue;
   }
 }
 
+
 export function remove(key: string): void {
   try {
     localStorage.removeItem(KEY_PREFIX + key);
+    // Also remove potential legacy key
+    localStorage.removeItem(key);
   } catch (error) {
     console.error(`Error removing localStorage key "${key}":`, error);
   }

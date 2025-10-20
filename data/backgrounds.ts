@@ -1,4 +1,4 @@
-// These are placeholder images simulating generation from a model like Imagen.
+// These are procedurally generated SVG backgrounds to create a psychedelic effect.
 // In a real application, these could be URLs to generated assets or larger base64 strings.
 export const psychedelicBackgrounds: string[] = [
   `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 800'%3E%3Cdefs%3E%3CradialGradient id='a' cx='400' cy='400' r='400' gradientUnits='userSpaceOnUse'%3E%3Cstop offset='0%25' stop-color='%23d946ef' /%3E%3Cstop offset='100%25' stop-color='%2306b6d4' /%3E%3C/radialGradient%3E%3C/defs%3E%3Crect fill='url(%23a)' width='800' height='800'/%3E%3C/svg%3E")`,

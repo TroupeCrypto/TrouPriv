@@ -2,7 +2,7 @@
 import React from 'react';
 import { Asset, CryptoCurrency, cryptoAssetTypes, nftAssetTypes } from '../types';
 // FIX: Use relative paths for local modules
-import { EditIcon, TrashIcon, SparklesIcon } from './icons/Icons';
+import { EditIcon, TrashIcon, WalletIcon } from './icons/Icons';
 
 interface AssetCardProps {
   asset: Asset;
@@ -20,8 +20,8 @@ const AssetCard: React.FC<AssetCardProps> = ({ asset, categoryName, cryptoCurren
     const isGain = gainLoss !== undefined && gainLoss >= 0;
     const gainLossPercent = (gainLoss !== undefined && asset.purchasePrice && asset.purchasePrice > 0) ? (gainLoss / asset.purchasePrice) * 100 : undefined;
     
-    const isMintable = nftAssetTypes.includes(asset.categoryId) && !asset.mintId;
-    const isMinted = !!asset.mintId;
+    const isMintable = nftAssetTypes.includes(asset.categoryId) && !asset.contractAddress && !asset.mintTxHash;
+    const isMinted = !!asset.contractAddress || !!asset.mintTxHash;
 
     return (
         <div className="bg-gray-900/50 p-4 rounded-lg border border-white/10 group relative flex flex-col h-full">
@@ -31,7 +31,7 @@ const AssetCard: React.FC<AssetCardProps> = ({ asset, categoryName, cryptoCurren
                     <h3 className="text-lg font-bold text-white">{asset.name}</h3>
                     <div className="flex items-center gap-2 flex-shrink-0">
                          {isMinted && (
-                            <span className="text-xs font-semibold uppercase tracking-wider bg-purple-900/50 text-purple-400 px-2 py-1 rounded">Minted</span>
+                            <span className="text-xs font-semibold uppercase tracking-wider bg-purple-900/50 text-purple-400 px-2 py-1 rounded">On-Chain</span>
                         )}
                         <span className="text-xs font-semibold uppercase tracking-wider bg-cyan-900/50 text-cyan-400 px-2 py-1 rounded">{categoryName}</span>
                     </div>
@@ -43,11 +43,11 @@ const AssetCard: React.FC<AssetCardProps> = ({ asset, categoryName, cryptoCurren
                 <div className="my-4">
                     <button 
                         onClick={onMint}
-                        className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold rounded-md transition-all duration-200 bg-purple-500/80 hover:bg-purple-500 text-white"
-                        title="This is a simulated minting for tracking purposes within the app."
+                        className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold rounded-md transition-all duration-200 bg-fuchsia-500/80 hover:bg-fuchsia-500 text-white"
+                        title="Begin the on-chain minting process for this asset."
                     >
-                        <SparklesIcon className="w-4 h-4" />
-                        Mint for Tracking
+                        <WalletIcon className="w-4 h-4" />
+                        Mint NFT
                     </button>
                 </div>
             )}
@@ -85,16 +85,16 @@ const AssetCard: React.FC<AssetCardProps> = ({ asset, categoryName, cryptoCurren
                     </div>
                 )}
                 {/* NFT Details */}
-                {asset.mintId && (
+                {asset.mintTxHash && (
                     <div className="flex justify-between">
-                        <span className="text-gray-400">Mint ID:</span>
-                        <span className="text-white truncate" title={asset.mintId}>{asset.mintId}</span>
+                        <span className="text-gray-400">Mint Tx:</span>
+                        <span className="text-white truncate" title={asset.mintTxHash}>{asset.mintTxHash.slice(0, 6)}...{asset.mintTxHash.slice(-4)}</span>
                     </div>
                 )}
                 {asset.contractAddress && (
                     <div className="flex justify-between">
                         <span className="text-gray-400">Contract:</span>
-                        <span className="text-white truncate" title={asset.contractAddress}>{asset.contractAddress}</span>
+                        <span className="text-white truncate" title={asset.contractAddress}>{asset.contractAddress.slice(0, 6)}...{asset.contractAddress.slice(-4)}</span>
                     </div>
                 )}
                 {asset.tokenId && (

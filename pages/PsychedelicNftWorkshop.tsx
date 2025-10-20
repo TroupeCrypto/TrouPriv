@@ -3,11 +3,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { GoogleGenAI, Modality } from "@google/genai";
 import { get, set } from '../utils/storage';
-import { Page, MintedNft } from '../types';
-// FIX: Use relative paths for local modules
-import { SpinnerIcon, CodeIcon, TrashIcon } from '../components/icons/Icons';
-import ConfirmationDialog from '../components/ConfirmationDialog';
-
+import { Page, Asset, AssetCategory } from '../types';
+// FIX: Imported the missing SparklesIcon component.
+import { SpinnerIcon, CodeIcon, CheckCircleIcon, SparklesIcon } from '../components/icons/Icons';
 
 const fileToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -53,7 +51,11 @@ const initialSettings: WorkshopSettings = {
 };
 
 
-const PsychedelicNftWorkshop: React.FC<{ setPage: (page: Page) => void; mintedNfts: MintedNft[]; setMintedNfts: React.Dispatch<React.SetStateAction<MintedNft[]>>; }> = ({ setPage, mintedNfts, setMintedNfts }) => {
+const PsychedelicNftWorkshop: React.FC<{ 
+    setPage: (page: Page) => void; 
+    setAssets: React.Dispatch<React.SetStateAction<Asset[]>>; 
+    assetCategories: AssetCategory[];
+}> = ({ setPage, setAssets, assetCategories }) => {
     const [settings, setSettings] = useState<WorkshopSettings>(() => get('workshop_settings', initialSettings));
     const { prompts, selectedAnimation, filterValues } = settings;
     
@@ -61,14 +63,12 @@ const PsychedelicNftWorkshop: React.FC<{ setPage: (page: Page) => void; mintedNf
     const [generatedImage, setGeneratedImage] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
-    const [isMinting, setIsMinting] = useState<boolean>(false);
-    const [mintSuccess, setMintSuccess] = useState<boolean>(false);
+    const [isSaving, setIsSaving] = useState<boolean>(false);
+    const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
     const [conceptImage, setConceptImage] = useState<File | null>(null);
     const [conceptImageUrl, setConceptImageUrl] = useState<string | null>(null);
     
     const imageRef = useRef<HTMLImageElement>(null);
-    const [nftToDelete, setNftToDelete] = useState<MintedNft | null>(null);
-    const [showClearAllDialog, setShowClearAllDialog] = useState(false);
 
     useEffect(() => {
         set('workshop_settings', settings);
@@ -104,7 +104,7 @@ const PsychedelicNftWorkshop: React.FC<{ setPage: (page: Page) => void; mintedNf
         setIsLoading(true);
         setError(null);
         setGeneratedImage(null);
-        setMintSuccess(false);
+        setSaveSuccess(false);
 
         try {
             const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
@@ -178,18 +178,18 @@ const PsychedelicNftWorkshop: React.FC<{ setPage: (page: Page) => void; mintedNf
         }
     };
     
-    const handleMint = () => {
+    const handleSaveCreation = () => {
         if (!generatedImage || !imageRef.current) return;
 
-        setIsMinting(true);
+        setIsSaving(true);
 
         const canvas = document.createElement('canvas');
         const img = imageRef.current;
         const ctx = canvas.getContext('2d');
 
         if (!ctx) {
-            setError("Could not process image for minting.");
-            setIsMinting(false);
+            setError("Could not process image for saving.");
+            setIsSaving(false);
             return;
         }
         
@@ -206,29 +206,38 @@ const PsychedelicNftWorkshop: React.FC<{ setPage: (page: Page) => void; mintedNf
             ctx.drawImage(imageToDraw, 0, 0);
             
             const filteredImageUrl = canvas.toDataURL('image/png');
+            
+            const nftArtCategory = assetCategories.find(c => c.id === 'nft-art');
+            if (!nftArtCategory) {
+                setError("Could not save: 'NFT - Art' category not found.");
+                setIsSaving(false);
+                return;
+            }
 
             setTimeout(() => {
-                const newNft: MintedNft = {
-                    id: `nft-${Date.now()}`,
+                const newAsset: Asset = {
+                    id: `creation-${Date.now()}`,
+                    name: prompts.length > 0 ? prompts.join(', ').substring(0, 50) : 'Psychedelic Artwork',
+                    categoryId: 'nft-art',
+                    value: 0,
+                    description: `AI-generated artwork from the Psychedelic NFT Workshop. Based on prompts: "${prompts.join(', ')}".`,
                     imageUrl: filteredImageUrl,
-                    prompt: prompts.join(', ') || 'Image-based creation',
-                    mintedAt: Date.now(),
-                    animationClass: selectedAnimation,
                 };
-                setMintedNfts(prev => [newNft, ...prev]);
-                setIsMinting(false);
-                setMintSuccess(true);
+                
+                setAssets(prev => [newAsset, ...prev]);
+                setIsSaving(false);
+                setSaveSuccess(true);
     
                 setTimeout(() => {
-                    setMintSuccess(false);
+                    setSaveSuccess(false);
                     setGeneratedImage(null);
                     setSettings(s => ({ ...s, selectedAnimation: '' }));
                 }, 3000);
             }, 1500);
         }
         imageToDraw.onerror = () => {
-             setError("Could not load image for minting process.");
-             setIsMinting(false);
+             setError("Could not load image for saving process.");
+             setIsSaving(false);
         }
     };
 
@@ -237,18 +246,6 @@ const PsychedelicNftWorkshop: React.FC<{ setPage: (page: Page) => void; mintedNf
         if (file) {
             setConceptImage(file);
         }
-    };
-    
-    const handleConfirmDelete = () => {
-        if (nftToDelete) {
-            setMintedNfts(prev => prev.filter(n => n.id !== nftToDelete.id));
-            setNftToDelete(null);
-        }
-    };
-
-    const handleConfirmClearAll = () => {
-        setMintedNfts([]);
-        setShowClearAllDialog(false);
     };
 
     const filterStyleString = `
@@ -313,157 +310,98 @@ const PsychedelicNftWorkshop: React.FC<{ setPage: (page: Page) => void; mintedNf
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
                 {/* Controls */}
-                <div className="bg-gray-900/50 border border-white/10 rounded-lg p-6 space-y-6">
+                <div className="bg-gray-900/50 p-6 rounded-lg border border-white/10 space-y-6">
                     <div>
-                        <h2 className="text-xl font-semibold text-white">1. Conceptualize your Masterpiece</h2>
-                        <p className="text-sm text-gray-400 mt-2">Upload a concept image and/or add descriptive keywords to guide the AI.</p>
-                        
-                        <div className="p-4 border border-dashed border-white/20 rounded-lg text-center space-y-2 mt-4">
-                            <label htmlFor="conceptImageUpload" className="cursor-pointer text-sm text-gray-400 hover:text-white transition-colors">
-                                {conceptImage ? 'Change concept image' : '+ Upload a concept image (optional)'}
-                            </label>
-                            <input id="conceptImageUpload" type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
-                            {conceptImageUrl && (
-                                <div className="relative w-24 h-24 mx-auto">
-                                    <img src={conceptImageUrl} alt="Concept preview" className="w-full h-full object-cover rounded-md" />
-                                    <button
-                                        onClick={() => setConceptImage(null)}
-                                        className="absolute -top-1 -right-1 bg-red-600 rounded-full p-0.5 text-white hover:bg-red-500 transition-colors"
-                                        aria-label="Remove concept image"
-                                    >
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-
-                        <form onSubmit={(e) => { e.preventDefault(); handleAddPrompt(); }} className="flex gap-2 mt-4">
-                            <input
-                                type="text"
-                                value={currentPrompt}
-                                onChange={(e) => setCurrentPrompt(e.target.value)}
-                                placeholder="Add a keyword (e.g., 'cosmic turtle')"
-                                className="flex-grow bg-gray-800/50 border border-white/10 rounded-md px-4 py-2 text-white focus:ring-2 focus:ring-cyan-500"
-                            />
-                            <button type="submit" className="bg-cyan-500/80 hover:bg-cyan-500 text-white font-bold py-2 px-4 rounded-md transition-colors whitespace-nowrap">
-                                Add
-                            </button>
-                        </form>
-                        <div className="flex flex-wrap gap-2 mt-2">
-                            {prompts.map(p => (
-                                <div key={p} className="bg-fuchsia-900/50 text-fuchsia-300 text-sm font-semibold px-3 py-1 rounded-full flex items-center gap-2">
-                                    {p}
-                                    <button onClick={() => handleRemovePrompt(p)} className="text-fuchsia-400 hover:text-white">
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" /></svg>
-                                    </button>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-
-                    <div>
-                        <h2 className="text-xl font-semibold text-white">2. Apply Visual Effects</h2>
-                        <div className="mt-4 space-y-3">
-                            <EffectSlider label="Saturation" value={filterValues.saturate} onChange={(e) => setSettings(s => ({ ...s, filterValues: { ...s.filterValues, saturate: +e.target.value } }))} unit="%" />
-                            <EffectSlider label="Contrast" value={filterValues.contrast} onChange={(e) => setSettings(s => ({ ...s, filterValues: { ...s.filterValues, contrast: +e.target.value } }))} unit="%" />
-                            <EffectSlider label="Hue" value={filterValues.hueRotate} onChange={(e) => setSettings(s => ({ ...s, filterValues: { ...s.filterValues, hueRotate: +e.target.value } }))} min={0} max={360} unit="deg" />
-                            <EffectSlider label="Blur" value={filterValues.blur} onChange={(e) => setSettings(s => ({ ...s, filterValues: { ...s.filterValues, blur: +e.target.value } }))} max={10} step={0.1} unit="px" />
-                            <EffectSlider label="Brightness" value={filterValues.brightness} onChange={(e) => setSettings(s => ({ ...s, filterValues: { ...s.filterValues, brightness: +e.target.value } }))} max={200} unit="%" />
+                        <h3 className="text-lg font-bold mb-2">Concept</h3>
+                        <div className="p-3 bg-gray-800/50 rounded-lg">
+                            <div className="flex gap-2">
+                                <input
+                                    type="text"
+                                    value={currentPrompt}
+                                    onChange={(e) => setCurrentPrompt(e.target.value)}
+                                    onKeyPress={(e) => e.key === 'Enter' && handleAddPrompt()}
+                                    placeholder="Add a prompt keyword (e.g., 'cosmic turtle')"
+                                    className="flex-grow bg-gray-700/50 border border-white/10 rounded-md px-3 py-1.5 text-sm"
+                                />
+                                <button onClick={handleAddPrompt} className="bg-cyan-600 hover:bg-cyan-500 text-white font-semibold px-4 rounded-md text-sm">Add</button>
+                            </div>
+                            <div className="flex flex-wrap gap-2 mt-3">
+                                {prompts.map(p => (
+                                    <span key={p} className="bg-fuchsia-900/50 text-fuchsia-300 text-xs font-semibold px-2 py-1 rounded-full flex items-center gap-1.5">
+                                        {p}
+                                        <button onClick={() => handleRemovePrompt(p)} className="text-fuchsia-400 hover:text-white">&times;</button>
+                                    </span>
+                                ))}
+                            </div>
+                            <div className="text-center text-gray-500 text-sm my-2">OR</div>
+                            <div className="text-center">
+                                 <label htmlFor="concept-upload" className="cursor-pointer text-sm text-cyan-400 hover:underline">
+                                    Upload a reference image
+                                </label>
+                                <input id="concept-upload" type="file" accept="image/*" className="hidden" onChange={handleImageUpload}/>
+                                {conceptImageUrl && <img src={conceptImageUrl} alt="Concept Preview" className="mt-2 w-24 h-24 object-cover rounded-md mx-auto"/>}
+                            </div>
                         </div>
                     </div>
                      <div>
-                        <h2 className="text-xl font-semibold text-white">3. Add Animation</h2>
-                         <div className="grid grid-cols-2 gap-2 mt-4">
+                        <h3 className="text-lg font-bold mb-2">Visual Effects</h3>
+                        <div className="p-3 bg-gray-800/50 rounded-lg grid grid-cols-2 gap-4">
+                            <EffectSlider label="Saturation" value={filterValues.saturate} onChange={(e) => setSettings(s => ({ ...s, filterValues: { ...s.filterValues, saturate: +e.target.value } }))} unit="%"/>
+                            <EffectSlider label="Contrast" value={filterValues.contrast} onChange={(e) => setSettings(s => ({ ...s, filterValues: { ...s.filterValues, contrast: +e.target.value } }))} unit="%"/>
+                            <EffectSlider label="Hue" value={filterValues.hueRotate} onChange={(e) => setSettings(s => ({ ...s, filterValues: { ...s.filterValues, hueRotate: +e.target.value } }))} max={360} unit="deg"/>
+                            <EffectSlider label="Brightness" value={filterValues.brightness} onChange={(e) => setSettings(s => ({ ...s, filterValues: { ...s.filterValues, brightness: +e.target.value } }))} unit="%"/>
+                             <div className="col-span-2">
+                                <EffectSlider label="Blur" value={filterValues.blur} onChange={(e) => setSettings(s => ({ ...s, filterValues: { ...s.filterValues, blur: +e.target.value } }))} max={10} step={0.1} unit="px"/>
+                            </div>
+                        </div>
+                    </div>
+                     <div>
+                        <h3 className="text-lg font-bold mb-2">Animation</h3>
+                         <div className="flex flex-wrap gap-2">
                             {animations.map(anim => (
-                                <button key={anim.name} onClick={() => setSettings(s => ({...s, selectedAnimation: anim.class}))} className={`py-2 text-sm font-semibold rounded-md transition-colors ${selectedAnimation === anim.class ? 'bg-cyan-500 text-white' : 'bg-gray-800/50 hover:bg-gray-700'}`}>
+                                <button key={anim.name} onClick={() => setSettings(s => ({ ...s, selectedAnimation: anim.class }))} className={`px-3 py-1 text-sm font-semibold rounded-full transition-colors ${selectedAnimation === anim.class ? 'bg-cyan-500 text-white' : 'bg-gray-800/50 text-gray-300 hover:bg-gray-700'}`}>
                                     {anim.name}
                                 </button>
                             ))}
                         </div>
                     </div>
-
-                    <button
-                        onClick={handleGenerateImage}
-                        disabled={isLoading}
-                        className="w-full bg-fuchsia-500/80 hover:bg-fuchsia-500 disabled:bg-gray-600 text-white font-bold py-3 px-4 rounded-md transition-colors flex items-center justify-center gap-2"
-                    >
-                        {isLoading ? (
-                            <>
-                                <SpinnerIcon className="w-5 h-5" />
-                                Generating Vision...
-                            </>
-                        ) : (
-                            'Generate Masterpiece'
-                        )}
+                    <button onClick={handleGenerateImage} disabled={isLoading} className="w-full bg-fuchsia-500/80 hover:bg-fuchsia-500 text-white font-bold py-3 rounded-md transition-colors disabled:bg-gray-600 flex items-center justify-center gap-2 text-lg">
+                        {isLoading ? <SpinnerIcon className="w-6 h-6" /> : <SparklesIcon className="w-6 h-6" />}
+                        {isLoading ? 'Conjuring Vision...' : 'Generate'}
                     </button>
                     {error && <p className="text-red-400 text-center text-sm">{error}</p>}
                 </div>
 
-                {/* Preview */}
-                <div className="bg-gray-900/50 border border-white/10 rounded-lg p-6 flex flex-col items-center justify-center min-h-[50vh]">
-                    {generatedImage ? (
-                        <div className="w-full space-y-4 animate-pop-in">
-                            <div className={`aspect-square w-full rounded-lg overflow-hidden glow-shadow ${selectedAnimation}`}>
-                                 <img ref={imageRef} src={generatedImage} alt="Generated NFT" className="w-full h-full object-cover" style={{ filter: filterStyleString }} />
-                            </div>
-                           
-                            <button
-                                onClick={handleMint}
-                                disabled={isMinting || mintSuccess}
-                                className="w-full bg-green-600/80 hover:bg-green-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-bold py-3 px-4 rounded-md transition-colors flex items-center justify-center gap-2"
-                            >
-                                {isMinting ? <><SpinnerIcon className="w-5 h-5" />Minting...</> : mintSuccess ? '✓ Minted!' : 'Mint to ProFolio'}
-                            </button>
-                        </div>
-                    ) : (
+                {/* Canvas */}
+                <div className="bg-gray-900/50 p-6 rounded-lg border border-white/10 aspect-square flex flex-col items-center justify-center relative">
+                    {isLoading && <SpinnerIcon className="w-16 h-16 text-fuchsia-400" />}
+                    {!isLoading && !generatedImage && (
                         <div className="text-center text-gray-500">
-                            <p>Your generated masterpiece will appear here.</p>
+                            <SparklesIcon className="w-16 h-16 mx-auto" />
+                            <p className="mt-2">Your creation will appear here.</p>
+                        </div>
+                    )}
+                    {generatedImage && (
+                        <div className="w-full h-full flex flex-col items-center justify-center animate-pop-in">
+                            <div className={`relative glow-shadow rounded-lg ${selectedAnimation}`}>
+                                <img
+                                    ref={imageRef}
+                                    src={generatedImage}
+                                    alt="Generated psychedelic art"
+                                    className="max-w-full max-h-full object-contain rounded-lg"
+                                    style={{ filter: filterStyleString }}
+                                />
+                            </div>
+                            <div className="mt-6 flex gap-4">
+                                <button onClick={handleSaveCreation} disabled={isSaving || saveSuccess} className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 px-6 rounded-md transition-colors disabled:bg-gray-700 disabled:cursor-not-allowed flex items-center gap-2">
+                                    {isSaving ? <SpinnerIcon className="w-5 h-5"/> : saveSuccess ? <CheckCircleIcon className="w-5 h-5"/> : null}
+                                    {isSaving ? 'Saving...' : saveSuccess ? 'Saved to Assets!' : 'Save to Assets'}
+                                </button>
+                            </div>
                         </div>
                     )}
                 </div>
             </div>
-
-             {/* Minted Gallery */}
-            <div className="bg-gray-900/50 border border-white/10 rounded-lg p-6">
-                <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-xl font-semibold text-white">Minted Collection</h2>
-                     {mintedNfts.length > 0 && (
-                        <button onClick={() => setShowClearAllDialog(true)} className="flex items-center gap-1 text-sm text-gray-400 hover:text-red-400 transition-colors">
-                            <TrashIcon className="w-4 h-4" /> Clear All
-                        </button>
-                    )}
-                </div>
-                {mintedNfts.length > 0 ? (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                        {mintedNfts.map(nft => (
-                             <div key={nft.id} className="group relative aspect-square">
-                                <img src={nft.imageUrl} alt={nft.prompt} className={`w-full h-full object-cover rounded-md ${nft.animationClass || ''}`} />
-                                <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                     <button onClick={() => setNftToDelete(nft)} className="p-2 bg-red-600/80 rounded-full text-white"><TrashIcon className="w-5 h-5" /></button>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                ) : (
-                    <p className="text-sm text-center text-gray-500 py-8">Your minted NFTs will be displayed here.</p>
-                )}
-            </div>
-             <ConfirmationDialog
-                isOpen={!!nftToDelete}
-                title="Delete NFT"
-                message="Are you sure you want to delete this minted NFT? This action cannot be undone."
-                onConfirm={handleConfirmDelete}
-                onCancel={() => setNftToDelete(null)}
-                confirmText="Delete"
-            />
-            <ConfirmationDialog
-                isOpen={showClearAllDialog}
-                title="Clear Entire Collection"
-                message="Are you sure you want to delete ALL minted NFTs from the workshop? This action cannot be undone."
-                onConfirm={handleConfirmClearAll}
-                onCancel={() => setShowClearAllDialog(false)}
-                confirmText="Clear All"
-            />
         </div>
     );
 };

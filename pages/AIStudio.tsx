@@ -3,7 +3,7 @@ import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { GoogleGenAI } from "@google/genai";
 import { Page, VaultItem } from '../types';
 import { SparklesIcon, SpinnerIcon, BibIcon, KeyIcon, CopyIcon, OpenAIIcon, AnthropicIcon, SettingsIcon, TrashIcon } from '../components/icons/Icons';
-import { useVault } from '../contexts/VaultContext';
+import { useVault, DecryptedVaultItem } from '../contexts/VaultContext';
 import { useMasterPassword } from '../contexts/MasterPasswordContext';
 import * as storage from '../utils/storage';
 
@@ -234,29 +234,26 @@ const AIStudio: React.FC<AIStudioProps> = ({ setPage, vaultItems }) => {
 
     const apiKeys = useMemo(() => {
         if (!isUnlocked) return {};
+
         const keys: Record<string, string> = {};
-        
         decryptedItems.forEach(item => {
             if (item.type === 'apiKey' && typeof item.decryptedContent === 'object' && item.decryptedContent && 'key' in item.decryptedContent) {
-                const keyContent = (item.decryptedContent as {key: string}).key;
-                const name = item.name.toUpperCase();
+                const keyContent = (item.decryptedContent as { key: string }).key;
+                const name = item.name.toLowerCase();
                 const website = item.website?.toLowerCase() || '';
 
-                if (name.includes('GEMINI') || name.includes('GOOGLE') || website.includes('google') || website.includes('aistudio')) {
-                    keys.gemini = keyContent;
-                }
-                if (name.includes('OPEN_AI') || website.includes('openai')) {
-                    keys.openai = keyContent;
-                }
-                if (name.includes('ANTHROPIC_AI') || website.includes('anthropic')) {
-                    keys.anthropic = keyContent;
-                }
+                if (name.includes('openai') || website.includes('openai')) keys.openai = keyContent;
+                if (name.includes('anthropic') || website.includes('anthropic')) keys.anthropic = keyContent;
+                if (name.includes('gemini') || name.includes('google') || website.includes('aistudio')) keys.gemini = keyContent;
             }
         });
         return keys;
     }, [isUnlocked, decryptedItems]);
     
-    const needsUnlock = (!apiKeys.openai || !apiKeys.anthropic) && !isUnlocked;
+    const needsUnlock = !isUnlocked && (
+        vaultItems.some(item => item.name.toLowerCase().includes('openai') || item.name.toLowerCase().includes('anthropic'))
+        && !apiKeys.openai && !apiKeys.anthropic
+    );
 
     const handleUnlock = useCallback(async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -299,56 +296,37 @@ const AIStudio: React.FC<AIStudioProps> = ({ setPage, vaultItems }) => {
                 });
                 resultText = result.text;
             } else if (providerId === 'openai') {
-                if (!apiKeys.openai) throw new Error("OpenAI API Key is not loaded from the vault.");
+                const apiKey = apiKeys.openai;
+                if (!apiKey) throw new Error("OpenAI API Key is not loaded from the vault.");
+                
                 const messages = [];
-                if (systemInstruction) {
-                    messages.push({ role: 'system', content: systemInstruction });
-                }
+                if (systemInstruction) messages.push({ role: 'system', content: systemInstruction });
                 messages.push({ role: 'user', content: prompt });
 
                 const res = await fetch('https://api.openai.com/v1/chat/completions', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKeys.openai}` },
-                    body: JSON.stringify({ 
-                        model: 'gpt-4o', 
-                        messages,
-                        temperature,
-                        max_tokens: maxTokens
-                    })
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+                    body: JSON.stringify({ model: 'gpt-4o', messages, temperature, max_tokens: maxTokens })
                 });
-                if (!res.ok) {
-                    const errorData = await res.json();
-                    throw new Error(`OpenAI API Error: ${errorData.error.message}`);
-                }
+                if (!res.ok) { const errorData = await res.json(); throw new Error(`OpenAI API Error: ${errorData.error.message}`); }
                 const data = await res.json();
                 resultText = data.choices[0].message.content;
+
             } else if (providerId === 'anthropic') {
-                if (!apiKeys.anthropic) throw new Error("Anthropic API Key is not loaded from the vault.");
+                const apiKey = apiKeys.anthropic;
+                if (!apiKey) throw new Error("Anthropic API Key is not loaded from the vault.");
+
                 const res = await fetch('https://api.anthropic.com/v1/messages', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'x-api-key': apiKeys.anthropic, 'anthropic-version': '2023-06-01' },
-                    body: JSON.stringify({ 
-                        model: 'claude-3-opus-20240229', 
-                        max_tokens: maxTokens, 
-                        messages: [{ role: 'user', content: prompt }],
-                        temperature,
-                        ...(systemInstruction && { system: systemInstruction }),
-                    })
+                    headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+                    body: JSON.stringify({ model: 'claude-3-opus-20240229', max_tokens: maxTokens, messages: [{ role: 'user', content: prompt }], temperature, ...(systemInstruction && { system: systemInstruction }) })
                 });
-                if (!res.ok) {
-                    const errorData = await res.json();
-                    throw new Error(`Anthropic API Error: ${errorData.error.message}`);
-                }
+                if (!res.ok) { const errorData = await res.json(); throw new Error(`Anthropic API Error: ${errorData.error.message}`); }
                 const data = await res.json();
                 resultText = data.content[0].text;
             }
             updateProviderState(providerId, { response: resultText.trim() });
-            const newHistoryItem: AIHistoryItem = {
-                id: Date.now(),
-                providerId,
-                prompt,
-                response: resultText.trim()
-            };
+            const newHistoryItem: AIHistoryItem = { id: Date.now(), providerId, prompt, response: resultText.trim() };
             setHistory(prev => [newHistoryItem, ...prev].slice(0, 50));
         } catch (err) {
             const message = err instanceof Error ? err.message : 'An unknown error occurred.';
@@ -361,10 +339,9 @@ const AIStudio: React.FC<AIStudioProps> = ({ setPage, vaultItems }) => {
     const handleSendUniversal = () => {
         if (!universalPrompt) return;
         Object.values(providers).forEach((p: ProviderState) => {
-            const providerIsDisabled = (p.id === 'openai' && !apiKeys.openai) || (p.id === 'anthropic' && !apiKeys.anthropic);
             updateProviderState(p.id, { prompt: universalPrompt });
-            if (providerIsDisabled) {
-                updateProviderState(p.id, { error: "Cannot send prompt: API Key not loaded from vault." });
+            if (!apiKeys[p.id as keyof typeof apiKeys] && p.id !== 'gemini') {
+                 updateProviderState(p.id, { error: "Cannot send prompt: API Key not loaded from vault." });
                 return;
             }
             callApi({ ...p, prompt: universalPrompt });

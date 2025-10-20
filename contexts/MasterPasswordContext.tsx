@@ -111,40 +111,76 @@ export const MasterPasswordProvider: React.FC<{ children: React.ReactNode }> = (
         _appData_stale: Omit<AppData, 'schemaVersion'>,
         setAppData: React.Dispatch<React.SetStateAction<Omit<AppData, 'schemaVersion'>>>
     ) => {
+        const backupAppDataKey = 'appData_backup_pwd_change';
+        const backupVerificationKey = `${VAULT_VERIFICATION_KEY}_backup_pwd_change`;
+
+        // 1. Get current state and create backups
         const latestAppData = getData<Omit<AppData, 'schemaVersion'> | null>('appData', null);
         if (!latestAppData) {
             throw new Error("Could not retrieve latest data for re-encryption. Operation aborted.");
         }
-
-        const reEncryptedItems = await Promise.all(
-            latestAppData.vaultItems.map(async (item) => {
-                const decryptedContentStr = await decrypt(item.encryptedContent, oldPassword);
-                const reEncryptedContent = await encrypt(decryptedContentStr, newPassword);
-                return { ...item, encryptedContent: reEncryptedContent };
-            })
-        );
-
-        const newVerificationItem = await encrypt(VERIFICATION_STRING, newPassword);
-        
-        const newAppData = { ...latestAppData, vaultItems: reEncryptedItems };
-        
-        const appDataSuccess = saveData('appData', newAppData);
-        if (!appDataSuccess) {
-            throw new Error("Failed to save re-encrypted app data. Password change aborted to prevent data corruption.");
+        const verificationItem = getData<string | null>(VAULT_VERIFICATION_KEY, null);
+        if (!verificationItem) {
+            throw new Error("Could not retrieve verification key. Operation aborted.");
         }
-        
-        const verificationSuccess = saveData(VAULT_VERIFICATION_KEY, newVerificationItem);
-        if (!verificationSuccess) {
-            // This is a critical failure state. The app data is updated with new encryption but the verification key is not.
-            // The user will be locked out. The saveData function will have already shown a critical alert.
-            throw new Error("CRITICAL: Failed to save new verification key after re-encrypting data. Your vault may be inaccessible.");
+
+        saveData(backupAppDataKey, latestAppData);
+        saveData(backupVerificationKey, verificationItem);
+
+        try {
+            // 2. Perform re-encryption
+            const reEncryptedItems = await Promise.all(
+                latestAppData.vaultItems.map(async (item) => {
+                    const decryptedContentStr = await decrypt(item.encryptedContent, oldPassword);
+                    const reEncryptedContent = await encrypt(decryptedContentStr, newPassword);
+                    return { ...item, encryptedContent: reEncryptedContent };
+                })
+            );
+
+            const newVerificationItem = await encrypt(VERIFICATION_STRING, newPassword);
+            const newAppData = { ...latestAppData, vaultItems: reEncryptedItems };
+            
+            // 3. Atomically update data (as best as possible with localStorage)
+            const appDataSuccess = saveData('appData', newAppData);
+            if (!appDataSuccess) {
+                throw new Error("Failed to save re-encrypted app data.");
+            }
+            
+            const verificationSuccess = saveData(VAULT_VERIFICATION_KEY, newVerificationItem);
+            if (!verificationSuccess) {
+                throw new Error("CRITICAL: Failed to save new verification key after re-encrypting data.");
+            }
+            
+            // 4. Update React state and session
+            setAppData(newAppData);
+            setMasterPassword(newPassword);
+            sessionStorage.setItem(SESSION_STORAGE_KEY, newPassword);
+
+            // 5. Clean up backups on success
+            removeData(backupAppDataKey);
+            removeData(backupVerificationKey);
+
+        } catch (error) {
+            // 6. Rollback on failure
+            const backupAppData = getData<Omit<AppData, 'schemaVersion'> | null>(backupAppDataKey, null);
+            const backupVerification = getData<string | null>(backupVerificationKey, null);
+
+            if (backupAppData) {
+                saveData('appData', backupAppData);
+            }
+            if (backupVerification) {
+                saveData(VAULT_VERIFICATION_KEY, backupVerification);
+            }
+
+            // Clean up backups
+            removeData(backupAppDataKey);
+            removeData(backupVerificationKey);
+            
+            // Re-throw error to be caught by the UI
+            throw error;
         }
-        
-        setAppData(newAppData);
-        
-        setMasterPassword(newPassword);
-        sessionStorage.setItem(SESSION_STORAGE_KEY, newPassword);
-    }, []);
+    // FIX: `setAppData` is a parameter, not a dependency. The hook depends on `setMasterPassword` from its closure.
+    }, [setMasterPassword]);
 
     const value = {
         masterPassword,

@@ -3,7 +3,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { ethers } from 'ethers';
 import { Page, DeploymentTransaction } from '../types';
 import { blockchains, getBlockchainByChainId } from '../data/blockchains';
-import { contractArtifacts } from '../data/contracts';
 import Editor from 'react-simple-code-editor';
 import prism from 'prismjs';
 import 'prismjs/components/prism-solidity';
@@ -13,6 +12,7 @@ import { CodeIcon, CompileIcon, DeployIcon, WalletIcon, TerminalIcon, ChevronUpI
 declare global {
   interface Window {
     ethereum?: any;
+    solc?: any;
   }
 }
 
@@ -45,8 +45,10 @@ const generateCode = (type: ContractType, name: string, features: Record<string,
   
   const imports = new Set<string>();
   const extensions = new Set<string>();
-  let constructorCalls = `ERC20(name, symbol)`;
-  if (type === 'ERC721') {
+  let constructorCalls = ``;
+  if (type === 'ERC20') {
+      constructorCalls = `ERC20(name, symbol)`;
+  } else {
       constructorCalls = `ERC721(name, symbol)`;
   }
   let contractBody = '';
@@ -77,14 +79,14 @@ const generateCode = (type: ContractType, name: string, features: Record<string,
       imports.add(`import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Pausable.sol";`);
       extensions.add('ERC20Pausable');
       contractBody += `
-    function _update(address from, address to, uint256 value) internal override(ERC20, ERC20Pausable) whenNotPaused {
+    function _update(address from, address to, uint256 value) internal override(ERC20, ERC20Pausable) {
         super._update(from, to, value);
     }`;
     } else { // ERC721
       imports.add(`import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Pausable.sol";`);
       extensions.add('ERC721Pausable');
       contractBody += `
-    function _update(address to, uint256 tokenId, address auth) internal override(ERC721, ERC721Pausable) whenNotPaused returns (address) {
+    function _update(address to, uint256 tokenId, address auth) internal override(ERC721, ERC721Pausable) returns (address) {
         return super._update(to, tokenId, auth);
     }`;
     }
@@ -116,10 +118,11 @@ const generateCode = (type: ContractType, name: string, features: Record<string,
 ` + contractBody;
         
         contractBody += `
-    function safeMint(address to) public onlyOwner {
+    function safeMint(address to, string memory uri) public onlyOwner {
         uint256 tokenId = _tokenIdCounter.current();
         _tokenIdCounter.increment();
         _safeMint(to, tokenId);
+        _setTokenURI(tokenId, uri);
     }
 `;
     }
@@ -127,7 +130,9 @@ const generateCode = (type: ContractType, name: string, features: Record<string,
 
   const sortedImports = Array.from(imports).sort().join('\n');
   const extensionsStr = Array.from(extensions).join(', ');
-
+  
+  const constructorParams = type === 'ERC20' ? 'string memory name, string memory symbol' : 'string memory name, string memory symbol';
+  
   const finalBody = contractBody.trim() ? `\n${contractBody}` : '';
 
   return `// SPDX-License-Identifier: MIT
@@ -136,7 +141,7 @@ ${pragma}
 ${sortedImports}
 
 contract ${name} is ${extensionsStr} {${finalBody}
-    constructor(string memory name, string memory symbol) ${constructorCalls} {}
+    constructor(${constructorParams}) ${constructorCalls} {}
 }`;
 };
 
@@ -268,7 +273,7 @@ const CodePage: React.FC<CodePageProps> = ({ setPage, deploymentTransactions, se
         const timestamp = new Date().toLocaleTimeString();
         setConsoleLogs(prev => [{ message, type, timestamp }, ...prev.slice(0, 100)]);
     }, []);
-
+    
     useEffect(() => {
         if (mode === 'generator') {
             if (contractType === 'ERC20') {
@@ -285,7 +290,8 @@ const CodePage: React.FC<CodePageProps> = ({ setPage, deploymentTransactions, se
 
     const handleGenerateCode = useCallback(() => {
         if (!contractName) return;
-        const generated = generateCode(contractType, contractName, features);
+        const finalContractName = contractName.replace(/[^a-zA-Z0-9_]/g, '') || 'MyContract';
+        const generated = generateCode(contractType, finalContractName, features);
         setCode(generated);
         setCompilationStatus('idle');
         setCompilationResult(null);
@@ -303,34 +309,96 @@ const CodePage: React.FC<CodePageProps> = ({ setPage, deploymentTransactions, se
         }
     }, [contractName, symbol, mode]);
 
-    const handleCompile = () => {
+    const handleCompile = async () => {
         setCompilationStatus('compiling');
         setCompilationError('');
         setCompilationResult(null);
-        setConstructorInputs([]);
-        setConstructorArgs({});
-        logToConsole(`Compiling ${contractName}...`);
+        const finalContractName = (mode === 'generator' ? contractName : importedContractName).replace(/[^a-zA-Z0-9_]/g, '');
+        logToConsole(`Compiling ${finalContractName}.sol...`);
+    
+        const worker = new Worker(URL.createObjectURL(new Blob([`
+            self.importScripts('https://binaries.soliditylang.org/bin/soljson-v0.8.20+commit.a1b79de6.js');
+            self.onmessage = function (e) {
+                const { code, contractName } = e.data;
+                const solc = self.solc;
+                
+                const findImports = (path) => {
+                    if (path.startsWith('@openzeppelin/')) {
+                        return { contents: 'error: Imports are not supported in this client-side compiler.' };
+                    }
+                    return { error: 'File not found' };
+                };
 
-        try {
-            if (!contractName) throw new Error("Contract name cannot be empty.");
-            const featuresKey = Object.entries(features).filter(([, value]) => value).map(([key]) => key).sort().join('_') || 'base';
-            const artifact = contractArtifacts[contractType]?.[featuresKey];
-            if (!artifact) throw new Error(`Could not find a pre-compiled artifact for ${contractType} with features: ${featuresKey}.`);
-
-            setCompilationResult({ name: contractName, abi: artifact.abi, bytecode: artifact.bytecode });
-            const constructor = artifact.abi.find(item => item.type === 'constructor');
+                const input = {
+                    language: 'Solidity',
+                    sources: {
+                        [contractName + '.sol']: {
+                            content: code,
+                        },
+                    },
+                    settings: {
+                        outputSelection: {
+                            '*': {
+                                '*': ['*'],
+                            },
+                        },
+                    },
+                };
+                const output = JSON.parse(solc.compile(JSON.stringify(input), { import: findImports }));
+                self.postMessage(output);
+            };
+        `], { type: 'application/javascript' })));
+    
+        worker.onmessage = (e) => {
+            const output = e.data;
+            if (output.errors) {
+                const errorMessages = output.errors.filter((err) => err.severity === 'error').map((err) => err.formattedMessage).join('\\n');
+                if (errorMessages) {
+                    if (errorMessages.includes("Imports are not supported")) {
+                         setCompilationStatus('error');
+                         const importError = "This compiler does not support OpenZeppelin imports directly. Please paste the full contract code from a source like Etherscan or use the Importer with pre-compiled artifacts.";
+                         setCompilationError(importError);
+                         logToConsole(<div><p className="font-bold">Compilation Failed</p><pre className="mt-1 font-mono p-2 bg-red-900/20 rounded text-xs">{importError}</pre></div>, 'error');
+                    } else {
+                        setCompilationStatus('error');
+                        setCompilationError(errorMessages);
+                        logToConsole(<div><p className="font-bold">Compilation Failed</p><pre className="mt-1 font-mono p-2 bg-red-900/20 rounded text-xs">{errorMessages}</pre></div>, 'error');
+                    }
+                    worker.terminate();
+                    return;
+                }
+            }
+    
+            const compiledContract = output.contracts[`${finalContractName}.sol`]?.[finalContractName];
+            if (!compiledContract) {
+                setCompilationStatus('error');
+                const errorMessage = "Compilation succeeded, but couldn't find the contract artifact. Make sure the contract name in the code matches the name you provided.";
+                setCompilationError(errorMessage);
+                logToConsole(errorMessage, 'error');
+                worker.terminate();
+                return;
+            }
+    
+            const abi = compiledContract.abi;
+            const bytecode = '0x' + compiledContract.evm.bytecode.object;
+    
+            setCompilationResult({ name: finalContractName, abi, bytecode });
+            const constructor = abi.find((item) => item.type === 'constructor');
             setConstructorInputs(constructor ? constructor.inputs : []);
             setCompilationStatus('success');
-            logToConsole(`Successfully loaded authentic artifact for ${contractName} (${featuresKey}).`, 'success');
-            
-            const highlightedCode = prism.highlight(code, prism.languages.solidity, 'solidity');
-            logToConsole(<pre className="p-2 bg-gray-800 rounded-md overflow-x-auto text-xs my-2"><code className="language-solidity" dangerouslySetInnerHTML={{ __html: highlightedCode }} /></pre>);
-        } catch (e) {
-            const message = e instanceof Error ? e.message : "An unknown error occurred.";
+            logToConsole(`Successfully compiled ${finalContractName}.sol.`, 'success');
+            worker.terminate();
+        };
+    
+        worker.onerror = (e) => {
             setCompilationStatus('error');
-            setCompilationError(message);
-            logToConsole(<div><p className="font-bold">Compilation Failed</p><p className="mt-1 font-mono p-2 bg-red-900/20 rounded">{message}</p></div>, 'error');
-        }
+            const errorMessage = `Compiler worker error: ${e.message}. The compiler might be blocked by your browser's security settings.`;
+            setCompilationError(errorMessage);
+            logToConsole(errorMessage, 'error');
+            worker.terminate();
+        };
+    
+        worker.postMessage({ code, contractName: finalContractName });
     };
 
     const handleLoadImported = () => {
@@ -413,8 +481,6 @@ const CodePage: React.FC<CodePageProps> = ({ setPage, deploymentTransactions, se
         logToConsole(`Preparing to deploy ${compilationResult.name}...`);
 
         try {
-            // --- Start of validation ---
-            // 1. Gas Limit Validation
             const deployOptions: { gasLimit?: number } = {};
             if (gasLimit.trim() !== '') {
                 const parsedGasLimit = parseInt(gasLimit, 10);
@@ -427,7 +493,6 @@ const CodePage: React.FC<CodePageProps> = ({ setPage, deploymentTransactions, se
                 logToConsole("Using default gas estimation.");
             }
 
-            // 2. Constructor Argument Validation
             const validatedArgs: any[] = [];
             for (const input of constructorInputs) {
                 const value = constructorArgs[input.name]?.trim() || '';
@@ -441,7 +506,7 @@ const CodePage: React.FC<CodePageProps> = ({ setPage, deploymentTransactions, se
                         if (input.type.startsWith('uint') && bigIntValue < 0) {
                             throw new Error(`Argument "${input.name}" must be a non-negative number.`);
                         }
-                        validatedArgs.push(value); // Ethers.js handles string numbers for BigInt
+                        validatedArgs.push(value); 
                     } catch (err) {
                         throw new Error(`Invalid number format for argument "${input.name}". Please enter a valid integer.`);
                     }
@@ -457,12 +522,10 @@ const CodePage: React.FC<CodePageProps> = ({ setPage, deploymentTransactions, se
                     }
                     validatedArgs.push(lowerValue === 'true');
                 } else {
-                    // Assume string for others
                     validatedArgs.push(value);
                 }
             }
-            // --- End of validation ---
-
+            
             const { abi, bytecode } = compilationResult;
             const { provider, signer } = wallet;
             
@@ -478,7 +541,7 @@ const CodePage: React.FC<CodePageProps> = ({ setPage, deploymentTransactions, se
                     logToConsole("Network switched successfully.", 'success');
                 } catch (switchError: any) {
                     const message = switchError.message || "Failed to switch network.";
-                    throw new Error(message); // Throw to be caught by the main catch block
+                    throw new Error(message);
                 }
             }
 
@@ -522,7 +585,6 @@ const CodePage: React.FC<CodePageProps> = ({ setPage, deploymentTransactions, se
         }
 
         try {
-            // --- Start of Validation ---
             const validatedParams: any[] = [];
             for (let i = 0; i < func.inputs.length; i++) {
                 const input = func.inputs[i];
@@ -557,8 +619,7 @@ const CodePage: React.FC<CodePageProps> = ({ setPage, deploymentTransactions, se
                     validatedParams.push(value);
                 }
             }
-            // --- End of Validation ---
-
+            
             logToConsole(`Interacting with ${tx.contractName} -> ${func.name}(${validatedParams.join(', ')})`);
             
             const contract = new ethers.Contract(tx.contractAddress, tx.abi, wallet.signer);
@@ -585,7 +646,7 @@ const CodePage: React.FC<CodePageProps> = ({ setPage, deploymentTransactions, se
     };
     
     const pageTitle = mode === 'generator' ? 'Smart Contract Builder' : 'Smart Contract Importer';
-    const backLink = mode === 'generator' ? Page.Web3Tools : Page.Code;
+    const backLink = Page.WebDev;
 
 
     return (
@@ -595,7 +656,7 @@ const CodePage: React.FC<CodePageProps> = ({ setPage, deploymentTransactions, se
                     <CodeIcon className="w-8 h-8 text-cyan-400" />
                     <div>
                         <h1 className="text-3xl font-bold text-white">{pageTitle}</h1>
-                        <button onClick={() => setPage(backLink)} className="text-sm text-cyan-400 hover:underline">&larr; Back to {mode === 'generator' ? 'Web3 Tools' : 'Code'}</button>
+                        <button onClick={() => setPage(backLink)} className="text-sm text-cyan-400 hover:underline">&larr; Back to Web-Dev</button>
                     </div>
                 </div>
             </header>
@@ -665,7 +726,7 @@ const CodePage: React.FC<CodePageProps> = ({ setPage, deploymentTransactions, se
                          <h2 className="text-lg font-semibold">2. Actions</h2>
                           <button onClick={mode === 'generator' ? handleCompile : handleLoadImported} disabled={compilationStatus === 'compiling'} className="w-full flex items-center justify-center gap-2 bg-cyan-600 hover:bg-cyan-500 disabled:bg-gray-700 text-white font-bold py-2 px-4 rounded-md transition-colors">
                             {compilationStatus === 'compiling' ? <SpinnerIcon className="w-5 h-5"/> : <CompileIcon className="w-5 h-5"/>}
-                            {compilationStatus === 'compiling' ? 'Loading...' : mode === 'generator' ? 'Compile' : 'Load Artifact'}
+                            {compilationStatus === 'compiling' ? 'Compiling...' : (mode === 'generator' ? 'Compile Contract' : 'Load Imported Artifact')}
                         </button>
                         {compilationStatus === 'success' && compilationResult && (
                              <div className="p-2 bg-green-900/30 border border-green-500/30 rounded-md text-center">

@@ -45,8 +45,7 @@ export type SocialPlatform =
 
 export interface SocialLink {
   platform: SocialPlatform;
-  authUrl: string;
-  connected: boolean;
+  url: string;
 }
 
 export interface BrandAuthConfig {
@@ -72,6 +71,7 @@ export interface Asset {
   purchasePrice?: number;
   purchaseDate?: string;
   mintId?: string;
+  mintTxHash?: string;
 }
 
 export interface CryptoCurrency {
@@ -125,14 +125,6 @@ export interface AssetCategory {
   id: string;
   name: string;
   group: string;
-}
-
-export interface MintedNft {
-  id: string;
-  imageUrl: string;
-  prompt: string;
-  mintedAt: number;
-  animationClass?: string;
 }
 
 export type PositionCategory = 'Staking' | 'Yield Farming' | 'Lending' | 'Stocks' | 'Other';
@@ -199,7 +191,7 @@ export interface AIProtocol {
     isActive: boolean;
 }
 
-export type AIMemoryItemType = 'file' | 'url' | 'text' | 'persona' | 'protocol' | 'database';
+export type AIMemoryItemType = 'file' | 'url' | 'text' | 'persona' | 'protocol';
 
 export interface AIMemoryItem {
     id: string;
@@ -213,6 +205,7 @@ export interface AIMemoryItem {
 export interface ChatMessage {
     role: 'user' | 'model';
     content: string;
+    imageUrl?: string;
     model?: 'Gemini' | 'OpenAI' | 'Anthropic';
 }
 
@@ -227,7 +220,6 @@ export interface AppData {
   settings: AppSettings;
   socialAuth: BrandAuthConfig[];
   assetCategories: AssetCategory[];
-  mintedNfts: MintedNft[];
   positions: Position[];
   web3Wallet: Web3Wallet | null;
   deploymentTransactions: DeploymentTransaction[];

@@ -1,11 +1,130 @@
 
 import React, { useState, useMemo } from 'react';
-import { Asset, CryptoCurrency, AssetCategory, nftAssetTypes } from '../types';
+import { Asset, CryptoCurrency, AssetCategory, nftAssetTypes, DeploymentTransaction, Web3Wallet } from '../types';
 import AssetCard from '../components/AssetCard';
 import AssetForm from '../components/AssetForm';
 import ConfirmationDialog from '../components/ConfirmationDialog';
 import CsvImportModal from '../components/CsvImportModal';
-import { SparklesIcon } from '../components/icons/Icons';
+import { SparklesIcon, WalletIcon, SpinnerIcon } from '../components/icons/Icons';
+import { ethers } from 'ethers';
+
+interface MintModalProps {
+    assetToMint: Asset;
+    onClose: () => void;
+    onMintSuccess: (assetId: string, updates: Partial<Asset>) => void;
+    deployedContracts: DeploymentTransaction[];
+    web3Wallet: Web3Wallet;
+}
+
+const MintModal: React.FC<MintModalProps> = ({ assetToMint, onClose, onMintSuccess, deployedContracts, web3Wallet }) => {
+    const [selectedContractAddress, setSelectedContractAddress] = useState<string>('');
+    const [metadataUri, setMetadataUri] = useState('');
+    const [isMinting, setIsMinting] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const erc721Contracts = useMemo(() => {
+        return deployedContracts.filter(tx => 
+            tx.abi.some(item => item.name === 'safeMint' && item.type === 'function') &&
+            tx.abi.some(item => item.name === 'tokenURI' && item.type === 'function')
+        );
+    }, [deployedContracts]);
+
+    const handleMint = async () => {
+        if (!selectedContractAddress || !metadataUri) {
+            setError("Please select a contract and provide a metadata URI.");
+            return;
+        }
+        if (typeof window.ethereum === 'undefined') {
+            setError("A Web3 wallet is required for this action.");
+            return;
+        }
+        
+        setIsMinting(true);
+        setError(null);
+
+        try {
+            const provider = new ethers.BrowserProvider(window.ethereum);
+            const signer = await provider.getSigner();
+            const contractAbi = erc721Contracts.find(c => c.contractAddress === selectedContractAddress)?.abi;
+            
+            if (!contractAbi) {
+                throw new Error("Could not find ABI for the selected contract.");
+            }
+
+            const contract = new ethers.Contract(selectedContractAddress, contractAbi, signer);
+            
+            const tx = await contract.safeMint(web3Wallet.address, metadataUri);
+            const receipt = await tx.wait();
+            
+            // It's not straightforward to get tokenId from receipt without parsing logs.
+            // For now, we store the tx hash and let the user fill in the token ID later.
+            const updates: Partial<Asset> = {
+                contractAddress: selectedContractAddress,
+                mintTxHash: tx.hash,
+                blockchainNetwork: web3Wallet.network,
+                mintId: 'Minted', // Generic status update
+            };
+            onMintSuccess(assetToMint.id, updates);
+            onClose();
+
+        } catch (err) {
+            console.error("Minting failed:", err);
+            setError(err instanceof Error ? err.message : "An unknown error occurred during minting.");
+        } finally {
+            setIsMinting(false);
+        }
+    };
+    
+    const metadataTemplate = JSON.stringify({
+        name: assetToMint.name,
+        description: assetToMint.description,
+        image: "YOUR_IMAGE_IPFS_OR_HTTP_URL_HERE",
+        attributes: [
+            { trait_type: "Category", value: assetToMint.categoryId }
+        ]
+    }, null, 2);
+
+    return (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-gray-900 border border-white/10 rounded-lg shadow-2xl max-w-lg w-full p-6 space-y-4">
+                <h2 className="text-xl font-bold text-white">Mint "{assetToMint.name}" NFT</h2>
+                {assetToMint.imageUrl && <img src={assetToMint.imageUrl} alt="Asset to mint" className="w-full h-48 object-contain rounded-md mb-4" />}
+                
+                <p className="text-sm text-gray-400">Upload the metadata below to a service like IPFS, then paste the URL.</p>
+                <pre className="bg-gray-800 p-2 rounded-md text-xs text-gray-300 max-h-32 overflow-y-auto">{metadataTemplate}</pre>
+                
+                <select 
+                    value={selectedContractAddress} 
+                    onChange={e => setSelectedContractAddress(e.target.value)}
+                    className="w-full bg-gray-800/50 border border-white/10 rounded-md px-4 py-2 text-white"
+                >
+                    <option value="">-- Select a Deployed ERC721 Contract --</option>
+                    {erc721Contracts.map(tx => (
+                        <option key={tx.contractAddress} value={tx.contractAddress}>{tx.contractName} ({tx.contractAddress.slice(0, 6)}...)</option>
+                    ))}
+                </select>
+
+                <input 
+                    type="text" 
+                    value={metadataUri} 
+                    onChange={e => setMetadataUri(e.target.value)} 
+                    placeholder="ipfs://... or https://... Metadata URI"
+                    className="w-full bg-gray-800/50 border border-white/10 rounded-md px-4 py-2 text-white"
+                />
+
+                {error && <p className="text-red-400 text-sm text-center">{error}</p>}
+                
+                <div className="flex justify-end gap-4 pt-4 border-t border-white/10">
+                    <button onClick={onClose} disabled={isMinting} className="px-6 py-2 rounded-md text-sm bg-gray-600/50 hover:bg-gray-600">Cancel</button>
+                    <button onClick={handleMint} disabled={isMinting || !selectedContractAddress || !metadataUri} className="px-6 py-2 rounded-md text-sm bg-fuchsia-600 hover:bg-fuchsia-700 disabled:bg-gray-700 flex items-center gap-2">
+                        {isMinting ? <SpinnerIcon className="w-4 h-4" /> : <WalletIcon className="w-4 h-4" />}
+                        {isMinting ? 'Minting...' : 'Mint'}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 interface AssetsPageProps {
   assets: Asset[];
@@ -13,13 +132,16 @@ interface AssetsPageProps {
   cryptoCurrencies: CryptoCurrency[];
   assetCategories: AssetCategory[];
   setAssetCategories: React.Dispatch<React.SetStateAction<AssetCategory[]>>;
+  deploymentTransactions: DeploymentTransaction[];
+  web3Wallet: Web3Wallet | null;
 }
 
-const AssetsPage: React.FC<AssetsPageProps> = ({ assets, setAssets, cryptoCurrencies, assetCategories, setAssetCategories }) => {
+const AssetsPage: React.FC<AssetsPageProps> = ({ assets, setAssets, cryptoCurrencies, assetCategories, setAssetCategories, deploymentTransactions, web3Wallet }) => {
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
     const [assetToEdit, setAssetToEdit] = useState<Asset | null>(null);
     const [assetToDelete, setAssetToDelete] = useState<Asset | null>(null);
+    const [assetToMint, setAssetToMint] = useState<Asset | null>(null);
     
     const [filterGroup, setFilterGroup] = useState('All');
     const categoryGroups = useMemo(() => ['All', ...Array.from(new Set(assetCategories.map(c => c.group)))], [assetCategories]);
@@ -61,23 +183,16 @@ const AssetsPage: React.FC<AssetsPageProps> = ({ assets, setAssets, cryptoCurren
         }
     };
     
-    const handleMint = (assetToMint: Asset) => {
-        if (!nftAssetTypes.includes(assetToMint.categoryId)) return;
-
-        setAssets(prev => prev.map(a => {
-            if (a.id === assetToMint.id) {
-                return {
-                    ...a,
-                    mintId: `sim-${Date.now()}`,
-                    // For demo, we can generate some plausible-looking data
-                    contractAddress: '0x' + [...Array(40)].map(() => Math.floor(Math.random() * 16).toString(16)).join(''),
-                    tokenId: String(Math.floor(Math.random() * 10000)),
-                    blockchainNetwork: 'Simulated Network',
-                    tokenStandard: 'ERC-721'
-                };
-            }
-            return a;
-        }));
+    const handleMint = (asset: Asset) => {
+        if (!web3Wallet) {
+            alert("Please connect your wallet on the Wallet page before minting.");
+            return;
+        }
+        setAssetToMint(asset);
+    };
+    
+    const handleMintSuccess = (assetId: string, updates: Partial<Asset>) => {
+        setAssets(prev => prev.map(a => a.id === assetId ? { ...a, ...updates } : a));
     };
 
     const handleImport = (newAssets: Asset[], newCategories: AssetCategory[]) => {
@@ -123,6 +238,16 @@ const AssetsPage: React.FC<AssetsPageProps> = ({ assets, setAssets, cryptoCurren
                         />
                     </div>
                 </div>
+            )}
+            
+            {assetToMint && web3Wallet && (
+                <MintModal 
+                    assetToMint={assetToMint}
+                    onClose={() => setAssetToMint(null)}
+                    onMintSuccess={handleMintSuccess}
+                    deployedContracts={deploymentTransactions}
+                    web3Wallet={web3Wallet}
+                />
             )}
             
             <CsvImportModal

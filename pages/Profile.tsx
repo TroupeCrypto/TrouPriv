@@ -1,16 +1,12 @@
-
-import React, { useState, useEffect, useRef } from 'react';
-import { GoogleGenAI } from "@google/genai";
-// FIX: Use relative paths for local modules
-import { Profile, AppData, Alert, CryptoCurrency, Page } from '../types';
-// FIX: Use relative paths for local modules
-import { TrashIcon, EditIcon, SparklesIcon, SpinnerIcon } from '../components/icons/Icons';
+import React, { useState, useEffect, useMemo } from 'react';
+import { GoogleGenAI, Modality } from "@google/genai";
+import { Profile, AppData, Alert, CryptoCurrency, Page, cryptoAssetTypes } from '../types';
+import { TrashIcon, SparklesIcon, SpinnerIcon } from '../components/icons/Icons';
 
 interface ProfilePageProps {
   profile: Profile;
-  // FIX: Updated the type of `setProfile` to correctly accept a function updater, which is how it's used in the `useEffect` hook for auto-saving.
   setProfile: React.Dispatch<React.SetStateAction<Profile>>;
-  allData: Omit<AppData, 'schemaVersion' | 'settings'>;
+  allData: Omit<AppData, 'schemaVersion'>;
   loadAllData: (data: AppData) => void;
   alerts: Alert[];
   setAlerts: React.Dispatch<React.SetStateAction<Alert[]>>;
@@ -110,7 +106,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ profile, setProfile, allData,
   });
   const [saveStatus, setSaveStatus] = useState<'idle' | 'typing' | 'saved'>('idle');
   const [isGeneratingBio, setIsGeneratingBio] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isGeneratingAvatar, setIsGeneratingAvatar] = useState(false);
 
   useEffect(() => {
     if (saveStatus !== 'typing') return;
@@ -135,29 +131,53 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ profile, setProfile, allData,
     setFormData(prev => ({ ...prev, [id]: value }));
     setSaveStatus('typing');
   };
-  
-  const handleAvatarClick = () => {
-    fileInputRef.current?.click();
-  };
 
-  const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-      const file = event.target.files?.[0];
-      if (!file) return;
+  const handleGenerateAvatar = async () => {
+      setIsGeneratingAvatar(true);
+      try {
+        const { assets, cryptoCurrencies } = allData;
+        
+        const totalValue = assets.reduce((acc, asset) => {
+            if (cryptoAssetTypes.includes(asset.categoryId) && asset.cryptoId && asset.quantity) {
+                const crypto = cryptoCurrencies.find(c => c.id === asset.cryptoId);
+                return acc + (crypto ? crypto.price * asset.quantity : 0);
+            }
+            return acc + asset.value;
+        }, 0);
 
-      const MAX_AVATAR_SIZE_MB = 2;
-      if (file.size > MAX_AVATAR_SIZE_MB * 1024 * 1024) {
-          alert(`Image is too large. Please select a file smaller than ${MAX_AVATAR_SIZE_MB}MB.`);
-          return;
+        const assetClasses = [...new Set(assets.map(a => a.categoryId))].join(', ');
+
+        const prompt = `
+            An abstract, psychedelic digital painting representing '${profile.name}', a user whose bio is: "${profile.bio || 'A digital voyager'}". 
+            Their portfolio is valued at approximately $${totalValue.toFixed(0)} and includes asset classes like ${assetClasses || 'various items'}. 
+            The style should be surreal and digital, with vibrant, glowing energy lines reflecting the intersection of technology, art, and finance.
+            The mood should be optimistic and forward-thinking. Generate a portrait-style avatar.
+        `;
+        
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash-image',
+            contents: { parts: [{ text: prompt }] },
+            config: {
+                responseModalities: [Modality.IMAGE],
+            },
+        });
+        
+        for (const part of response.candidates[0].content.parts) {
+            if (part.inlineData) {
+                const base64ImageBytes: string = part.inlineData.data;
+                const newAvatarUrl = `data:image/png;base64,${base64ImageBytes}`;
+                setProfile(p => ({ ...p, avatarUrl: newAvatarUrl }));
+                return;
+            }
+        }
+        throw new Error("AI did not return an image.");
+      } catch (err) {
+          console.error("Avatar generation failed:", err);
+          alert("Could not generate a new avatar at this time. Please check your API key and try again.");
+      } finally {
+          setIsGeneratingAvatar(false);
       }
-
-      const reader = new FileReader();
-      reader.onload = (e) => {
-          const newAvatarUrl = e.target?.result;
-          if (typeof newAvatarUrl === 'string') {
-              setProfile({ ...profile, avatarUrl: newAvatarUrl });
-          }
-      };
-      reader.readAsDataURL(file);
   };
 
   const handleGenerateBio = async () => {
@@ -174,7 +194,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ profile, setProfile, allData,
           const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
           const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
-            contents: prompt,
+            contents: { parts: [{ text: prompt }] },
           });
           setFormData(prev => ({ ...prev, bio: response.text.trim() }));
           setSaveStatus('typing');
@@ -231,13 +251,13 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ profile, setProfile, allData,
         <div className="relative w-24 h-24 mx-auto group">
             <img src={profile.avatarUrl} alt="User Avatar" className="w-24 h-24 rounded-full ring-4 ring-cyan-500/50 object-cover" />
             <button 
-                onClick={handleAvatarClick} 
-                className="absolute inset-0 bg-black/60 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                aria-label="Change avatar"
+                onClick={handleGenerateAvatar}
+                disabled={isGeneratingAvatar}
+                className="absolute inset-0 bg-black/60 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer disabled:opacity-100 disabled:cursor-wait"
+                title="Generate a new AI avatar based on your profile"
             >
-                <EditIcon className="w-6 h-6" />
+                {isGeneratingAvatar ? <SpinnerIcon className="w-8 h-8" /> : <SparklesIcon className="w-8 h-8" />}
             </button>
-            <input type="file" ref={fileInputRef} onChange={handleAvatarChange} accept="image/*" className="hidden" />
         </div>
         <h2 className="text-3xl font-bold pt-2">{profile.name}</h2>
         {profile.website && (

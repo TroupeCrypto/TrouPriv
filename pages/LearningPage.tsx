@@ -1,7 +1,8 @@
+
 import React, { useState, useCallback } from 'react';
 import { GoogleGenAI } from "@google/genai";
 import { AIMemoryItem, AIMemoryItemType } from '../types';
-import { BookOpenIcon, DatabaseIcon, FileUploadIcon, SpinnerIcon, TrashIcon, FileTextIcon, LinkIcon } from '../components/icons/Icons';
+import { BookOpenIcon, FileUploadIcon, SpinnerIcon, TrashIcon, FileTextIcon, LinkIcon } from '../components/icons/Icons';
 
 interface LearningPageProps {
   aiMemory: AIMemoryItem[];
@@ -21,12 +22,7 @@ const LearningPage: React.FC<LearningPageProps> = ({ aiMemory, setAiMemory }) =>
     const [isProcessing, setIsProcessing] = useState(false);
     const [processingError, setProcessingError] = useState<string | null>(null);
     const [isDragging, setIsDragging] = useState(false);
-
-    // DB Connection State
-    const [dbType, setDbType] = useState('postgresql');
-    const [dbHost, setDbHost] = useState('');
-    const [dbUser, setDbUser] = useState('');
-    const [dbName, setDbName] = useState('');
+    const [urlInput, setUrlInput] = useState('');
 
     const addMemoryItem = (type: AIMemoryItemType, name: string, summary: string, source: string) => {
         const newItem: AIMemoryItem = {
@@ -49,16 +45,15 @@ const LearningPage: React.FC<LearningPageProps> = ({ aiMemory, setAiMemory }) =>
         try {
             if (file.type.startsWith('text/')) {
                 const textContent = await fileToText(file);
-                const textSnippet = textContent.slice(0, 4000); // Use a snippet for the prompt
+                const textSnippet = textContent.slice(0, 4000); 
 
                 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
                 const prompt = `Summarize the key information in the following document snippet in one concise sentence for an AI's memory log. Snippet: "${textSnippet}"`;
-                const response = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: prompt });
+                const response = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: { parts: [{ text: prompt }] } });
                 
                 addMemoryItem('file', file.name, response.text, `local file (${(file.size / 1024).toFixed(1)} KB)`);
             } else {
-                // For non-text files, create a placeholder memory item
-                const summary = `Ingested non-text file. Content analysis requires a compatible model.`;
+                const summary = `Ingested non-text file. Content analysis is not supported for this file type.`;
                 addMemoryItem('file', file.name, summary, `local file (${(file.size / 1024).toFixed(1)} KB)`);
             }
         } catch (err) {
@@ -68,6 +63,28 @@ const LearningPage: React.FC<LearningPageProps> = ({ aiMemory, setAiMemory }) =>
             setIsProcessing(false);
         }
     }, [setAiMemory]);
+
+    const handleUrlIngestion = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!urlInput.trim()) return;
+
+        setIsProcessing(true);
+        setProcessingError(null);
+        try {
+            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+            // This is a simplified approach. A real implementation would fetch the URL's content server-side.
+            const prompt = `This is a URL: "${urlInput}". Create a one-sentence summary for an AI to remember what this link is about.`;
+            const response = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: { parts: [{ text: prompt }] } });
+            addMemoryItem('url', urlInput, response.text, 'web');
+            setUrlInput('');
+        } catch (err) {
+            console.error("URL ingestion failed:", err);
+            setProcessingError(err instanceof Error ? err.message : "Could not process URL.");
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
 
     const handleDragEvents = (e: React.DragEvent) => {
         e.preventDefault();
@@ -81,22 +98,6 @@ const LearningPage: React.FC<LearningPageProps> = ({ aiMemory, setAiMemory }) =>
         if (files && files.length > 0) {
             handleFileIngestion(files);
         }
-    };
-    
-    const handleConnectDatabase = (e: React.FormEvent) => {
-        e.preventDefault();
-        if(!dbHost || !dbUser || !dbName) {
-            alert("Please fill in all database connection details.");
-            return;
-        }
-        const source = `${dbType}://${dbUser}@${dbHost}/${dbName}`;
-        const name = `DB: ${dbName} on ${dbHost}`;
-        const summary = `Connection to ${dbType} database established. Ready to query for real-time data analysis and report generation.`;
-        addMemoryItem('database', name, summary, source);
-        // Clear form
-        setDbHost('');
-        setDbUser('');
-        setDbName('');
     };
     
     const handleDeleteMemory = (id: string) => {
@@ -121,26 +122,6 @@ const LearningPage: React.FC<LearningPageProps> = ({ aiMemory, setAiMemory }) =>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
                 <div className="space-y-6">
-                    {/* Database Connections */}
-                    <div className="bg-gray-900/50 border border-white/10 rounded-lg p-6 space-y-4">
-                        <h2 className="text-xl font-semibold text-white flex items-center gap-2"><DatabaseIcon className="w-6 h-6"/>Database Integration</h2>
-                        <form onSubmit={handleConnectDatabase} className="space-y-3">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                <input type="text" value={dbHost} onChange={e => setDbHost(e.target.value)} placeholder="Host" required className={commonInputStyle} />
-                                <select value={dbType} onChange={e => setDbType(e.target.value)} className={commonInputStyle}>
-                                    <option value="postgresql">PostgreSQL</option>
-                                    <option value="mysql">MySQL</option>
-                                    <option value="mongodb">MongoDB</option>
-                                </select>
-                            </div>
-                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                <input type="text" value={dbUser} onChange={e => setDbUser(e.target.value)} placeholder="User" required className={commonInputStyle} />
-                                <input type="text" value={dbName} onChange={e => setDbName(e.target.value)} placeholder="Database Name" required className={commonInputStyle} />
-                            </div>
-                            <button type="submit" className="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 px-4 rounded-md transition-colors">Simulate Connection</button>
-                        </form>
-                    </div>
-
                     {/* File Ingestion */}
                     <div className="bg-gray-900/50 border border-white/10 rounded-lg p-6 space-y-4">
                          <h2 className="text-xl font-semibold text-white flex items-center gap-2"><FileUploadIcon className="w-6 h-6"/>File Ingestion</h2>
@@ -160,7 +141,7 @@ const LearningPage: React.FC<LearningPageProps> = ({ aiMemory, setAiMemory }) =>
                             {isProcessing ? (
                                 <div className="flex flex-col items-center gap-2 text-gray-400">
                                     <SpinnerIcon className="w-8 h-8"/>
-                                    <span>BiB! is processing the file...</span>
+                                    <span>BiB! is processing...</span>
                                 </div>
                             ) : (
                                 <label htmlFor="file-upload" className="cursor-pointer space-y-2">
@@ -171,6 +152,15 @@ const LearningPage: React.FC<LearningPageProps> = ({ aiMemory, setAiMemory }) =>
                             )}
                          </div>
                          {processingError && <p className="text-red-400 text-center text-sm">{processingError}</p>}
+                    </div>
+
+                    {/* URL Ingestion */}
+                    <div className="bg-gray-900/50 border border-white/10 rounded-lg p-6 space-y-4">
+                        <h2 className="text-xl font-semibold text-white flex items-center gap-2"><LinkIcon className="w-6 h-6"/>URL Ingestion</h2>
+                        <form onSubmit={handleUrlIngestion} className="flex gap-2">
+                            <input type="url" value={urlInput} onChange={(e) => setUrlInput(e.target.value)} placeholder="https://example.com" required className={commonInputStyle} />
+                            <button type="submit" disabled={isProcessing} className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 px-4 rounded-md transition-colors">Ingest</button>
+                        </form>
                     </div>
                 </div>
                 
@@ -184,7 +174,6 @@ const LearningPage: React.FC<LearningPageProps> = ({ aiMemory, setAiMemory }) =>
                                     <div className="flex items-start gap-3 min-w-0">
                                         <div className="text-gray-500 pt-1">
                                             {mem.type === 'file' && <FileTextIcon className="w-5 h-5"/>}
-                                            {mem.type === 'database' && <DatabaseIcon className="w-5 h-5"/>}
                                             {mem.type === 'url' && <LinkIcon className="w-5 h-5"/>}
                                         </div>
                                         <div className="flex-1 min-w-0">
@@ -197,11 +186,10 @@ const LearningPage: React.FC<LearningPageProps> = ({ aiMemory, setAiMemory }) =>
                                 <p className="text-sm text-gray-400 mt-2 pl-8">{mem.contentSummary}</p>
                             </div>
                         )) : (
-                             <p className="text-sm text-center text-gray-500 py-12">The AI's memory is a blank slate. Connect a database or upload a file to begin teaching.</p>
+                             <p className="text-sm text-center text-gray-500 py-12">The AI's memory is a blank slate. Upload a file or URL to begin teaching.</p>
                         )}
                     </div>
                 </div>
-
             </div>
         </div>
     );

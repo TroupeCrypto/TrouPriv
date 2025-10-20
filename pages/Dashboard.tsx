@@ -107,7 +107,6 @@ const TimeRangeSelector: React.FC<{
 };
 
 const PortfolioChart: React.FC<{ history: PortfolioHistoryPoint[], timeRange: TimeRange }> = ({ history, timeRange }) => {
-    // Filter history based on timeRange
     const filteredHistory = useMemo(() => {
         if (!history || history.length === 0) return [];
         const now = Date.now();
@@ -130,6 +129,27 @@ const PortfolioChart: React.FC<{ history: PortfolioHistoryPoint[], timeRange: Ti
     const changePercent = firstValue === 0 ? 0 : (change / firstValue) * 100;
     const isPositive = change >= 0;
 
+    const width = 500;
+    const height = 192; // h-48
+    const padding = 5;
+
+    const minTimestamp = filteredHistory[0].timestamp;
+    const maxTimestamp = filteredHistory[filteredHistory.length - 1].timestamp;
+    const timestampRange = maxTimestamp - minTimestamp === 0 ? 1 : maxTimestamp - minTimestamp;
+
+    const values = filteredHistory.map(p => p.value);
+    const minValue = Math.min(...values);
+    const maxValue = Math.max(...values);
+    const valueRange = maxValue - minValue === 0 ? 1 : maxValue - minValue;
+
+    const points = filteredHistory
+        .map(p => {
+            const x = ((p.timestamp - minTimestamp) / timestampRange) * (width - padding * 2) + padding;
+            const y = height - padding - ((p.value - minValue) / valueRange) * (height - padding * 2);
+            return `${x.toFixed(2)},${y.toFixed(2)}`;
+        })
+        .join(' ');
+
     return (
         <div className="h-full">
             <div className="flex items-baseline gap-4 mb-2">
@@ -139,9 +159,22 @@ const PortfolioChart: React.FC<{ history: PortfolioHistoryPoint[], timeRange: Ti
                     <span>{isPositive ? '+' : ''}{change.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} ({changePercent.toFixed(2)}%)</span>
                 </div>
             </div>
-            {/* Chart visualization would go here */}
             <div className="h-48 bg-gray-800/50 rounded-md flex items-center justify-center">
-                <p className="text-gray-600 text-sm">[Chart Placeholder]</p>
+                <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full">
+                    <defs>
+                        <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor={isPositive ? '#4ade80' : '#f87171'} stopOpacity="0.3"/>
+                        <stop offset="100%" stopColor={isPositive ? '#4ade80' : '#f87171'} stopOpacity="0"/>
+                        </linearGradient>
+                    </defs>
+                    <path d={`M ${points.split(' ')[0]} L ${points} L ${width-padding},${height-padding} L ${padding},${height-padding} Z`} fill="url(#chartGradient)" />
+                    <polyline
+                        fill="none"
+                        stroke={isPositive ? '#4ade80' : '#f87171'}
+                        strokeWidth="2"
+                        points={points}
+                    />
+                </svg>
             </div>
         </div>
     );
@@ -189,7 +222,6 @@ const Dashboard: React.FC<DashboardProps> = ({ assets, cryptoCurrencies, setCryp
             const categoryMap = new Map(assetCategories.map(c => [c.id, c.group]));
 
             assets.forEach(asset => {
-                // FIX: Explicitly cast the result of categoryMap.get() to fix type inference issue.
                 const group = (categoryMap.get(asset.categoryId) as string | undefined) || 'Other';
                 const assetValue = cryptoAssetTypes.includes(asset.categoryId) && asset.cryptoId && asset.quantity
                     ? (cryptoCurrencies.find(c => c.id === asset.cryptoId)?.price || 0) * asset.quantity
@@ -240,7 +272,6 @@ const Dashboard: React.FC<DashboardProps> = ({ assets, cryptoCurrencies, setCryp
         }
     }, [totalPortfolioValue, topMovers, assets, assetCategories, cryptoCurrencies]);
     
-    // Auto-generate insight if it's empty
     useEffect(() => {
         if (!aiInsight && !isGeneratingInsight) {
             generateAiInsight();
@@ -315,5 +346,4 @@ const Dashboard: React.FC<DashboardProps> = ({ assets, cryptoCurrencies, setCryp
     );
 };
 
-// FIX: Add default export to resolve module import error in App.tsx.
 export default Dashboard;
