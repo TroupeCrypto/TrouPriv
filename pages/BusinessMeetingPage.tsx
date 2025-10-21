@@ -3,6 +3,7 @@ import React, { useState, useMemo } from 'react';
 import { GoogleGenAI } from "@google/genai";
 import { AppData } from '../types';
 import { BriefcaseIcon, SpinnerIcon, SparklesIcon } from '../components/icons/Icons';
+import { getGeminiApiKeyOrThrow } from '../utils/env';
 
 interface BusinessMeetingPageProps {
   allData: Omit<AppData, 'schemaVersion'>;
@@ -56,7 +57,8 @@ const BusinessMeetingPage: React.FC<BusinessMeetingPageProps> = ({ allData }) =>
         setError(null);
         setReportContent('');
         try {
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+            const apiKey = getGeminiApiKeyOrThrow();
+            const ai = new GoogleGenAI({ apiKey });
             const response = await ai.models.generateContent({
               model: 'gemini-2.5-flash',
               contents: { parts: [{ text: generatePrompt }] },

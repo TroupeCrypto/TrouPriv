@@ -6,6 +6,7 @@ import { get, set } from '../utils/storage';
 import { Page, Asset, AssetCategory } from '../types';
 // FIX: Imported the missing SparklesIcon component.
 import { SpinnerIcon, CodeIcon, CheckCircleIcon, SparklesIcon } from '../components/icons/Icons';
+import { getGeminiApiKeyOrThrow } from '../utils/env';
 
 const fileToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -107,7 +108,8 @@ const PsychedelicNftWorkshop: React.FC<{
         setSaveSuccess(false);
 
         try {
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+            const apiKey = getGeminiApiKeyOrThrow();
+            const ai = new GoogleGenAI({ apiKey });
             
             const parts: any[] = [];
             

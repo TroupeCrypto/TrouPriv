@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { GoogleGenAI, Modality } from "@google/genai";
 import { Profile, AppData, Alert, CryptoCurrency, Page, cryptoAssetTypes, VaultItem } from '../types';
 import { TrashIcon, SparklesIcon, SpinnerIcon } from '../components/icons/Icons';
+import { getGeminiApiKeyOrThrow } from '../utils/env';
 
 interface ProfilePageProps {
   profile: Profile;
@@ -154,7 +155,8 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ profile, setProfile, allData,
             The mood should be optimistic and forward-thinking. Generate a portrait-style avatar.
         `;
         
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const apiKey = getGeminiApiKeyOrThrow();
+            const ai = new GoogleGenAI({ apiKey });
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash-image',
             contents: { parts: [{ text: prompt }] },
@@ -191,7 +193,8 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ profile, setProfile, allData,
           - Tone: Slightly futuristic, creative, and confident.
       `;
       try {
-          const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+          const apiKey = getGeminiApiKeyOrThrow();
+            const ai = new GoogleGenAI({ apiKey });
           const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
             contents: { parts: [{ text: prompt }] },

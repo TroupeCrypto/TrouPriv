@@ -14,11 +14,12 @@ export default defineConfig(({ mode }) => {
     plugins: [react()],
     // Vite automatically exposes environment variables prefixed with VITE_ to import.meta.env
     // We also define process.env compatibility for existing code that uses process.env.API_KEY
+    // Use empty string for undefined values to prevent runtime errors
     define: {
-      'process.env.API_KEY': JSON.stringify(env.VITE_GEMINI_API_KEY),
-      'process.env.GEMINI_API_KEY': JSON.stringify(env.VITE_GEMINI_API_KEY),
-      'process.env.OPENAI_API_KEY': JSON.stringify(env.VITE_OPENAI_API_KEY),
-      'process.env.ANTHROPIC_API_KEY': JSON.stringify(env.VITE_ANTHROPIC_API_KEY)
+      'process.env.API_KEY': JSON.stringify(env.VITE_GEMINI_API_KEY || ''),
+      'process.env.GEMINI_API_KEY': JSON.stringify(env.VITE_GEMINI_API_KEY || ''),
+      'process.env.OPENAI_API_KEY': JSON.stringify(env.VITE_OPENAI_API_KEY || ''),
+      'process.env.ANTHROPIC_API_KEY': JSON.stringify(env.VITE_ANTHROPIC_API_KEY || '')
     },
     resolve: {
       alias: {

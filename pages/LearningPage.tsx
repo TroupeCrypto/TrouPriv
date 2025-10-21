@@ -3,6 +3,7 @@ import React, { useState, useCallback } from 'react';
 import { GoogleGenAI } from "@google/genai";
 import { AIMemoryItem, AIMemoryItemType } from '../types';
 import { BookOpenIcon, FileUploadIcon, SpinnerIcon, TrashIcon, FileTextIcon, LinkIcon } from '../components/icons/Icons';
+import { getGeminiApiKeyOrThrow } from '../utils/env';
 
 interface LearningPageProps {
   aiMemory: AIMemoryItem[];
@@ -47,7 +48,8 @@ const LearningPage: React.FC<LearningPageProps> = ({ aiMemory, setAiMemory }) =>
                 const textContent = await fileToText(file);
                 const textSnippet = textContent.slice(0, 4000); 
 
-                const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+                const apiKey = getGeminiApiKeyOrThrow();
+            const ai = new GoogleGenAI({ apiKey });
                 const prompt = `Summarize the key information in the following document snippet in one concise sentence for an AI's memory log. Snippet: "${textSnippet}"`;
                 const response = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: { parts: [{ text: prompt }] } });
                 
@@ -71,7 +73,8 @@ const LearningPage: React.FC<LearningPageProps> = ({ aiMemory, setAiMemory }) =>
         setIsProcessing(true);
         setProcessingError(null);
         try {
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+            const apiKey = getGeminiApiKeyOrThrow();
+            const ai = new GoogleGenAI({ apiKey });
             // This is a simplified approach. A real implementation would fetch the URL's content server-side.
             const prompt = `This is a URL: "${urlInput}". Create a one-sentence summary for an AI to remember what this link is about.`;
             const response = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: { parts: [{ text: prompt }] } });
