@@ -59,9 +59,24 @@ Vite (the build tool used by this project) requires environment variables that s
 
 ### Debugging
 
-When running in development mode, the app will log the status of environment variables to the browser console on startup. Check the console to verify your API keys are loaded correctly.
+The app logs the status of environment variables to the browser console on startup in **both development and production modes**. Check the console to verify your API keys are loaded correctly.
+
+**Development Mode:**
+- Shows all VITE_ variable names
+- Shows detailed debugging information
+
+**Production Mode:**
+- Shows whether keys are loaded (✅/❌)
+- Shows environment mode
+- Shows warnings if keys are missing
+
+For detailed troubleshooting, see [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md).
 
 ## Deployment
+
+For comprehensive deployment instructions including platform-specific guides (Vercel, Netlify, Cloudflare, etc.), see the **[DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md)**.
+
+### Quick Deployment Steps
 
 When deploying to production:
 
@@ -70,3 +85,16 @@ When deploying to production:
 3. Deploy the `dist` folder to your hosting service
 
 The environment variables will be embedded in the JavaScript bundle during the build process.
+
+### Verifying Deployment
+
+After deployment:
+1. Open your deployed site
+2. Open the browser console
+3. Check for the environment status log showing "✅ Loaded" for all required keys
+
+## Documentation
+
+- **[DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md)** - Comprehensive deployment guide with platform-specific instructions
+- **[ENV_CONFIG.md](./ENV_CONFIG.md)** - Detailed environment variable configuration guide
+- **[API_KEY_FIX_SUMMARY.md](./API_KEY_FIX_SUMMARY.md)** - Technical implementation details
