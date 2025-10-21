@@ -33,10 +33,10 @@ import LearningPage from './pages/LearningPage';
 import ProtocolsPage from './pages/ProtocolsPage';
 import BusinessMeetingPage from './pages/BusinessMeetingPage';
 import ChatPage from './pages/ChatPage';
-import { logEnvStatus } from './utils/env';
+import { logEnvStatus, initializeEnvValidation } from './utils/env';
 
-// Log environment variables status on app load (development only)
-logEnvStatus();
+// Initialize and validate environment variables on app load
+initializeEnvValidation();
 
 // Defines a clean, empty initial state for the application.
 const initialState: Omit<AppData, 'schemaVersion'> = {
