@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { GoogleGenAI, Modality } from "@google/genai";
-import { Profile, AppData, Alert, CryptoCurrency, Page, cryptoAssetTypes } from '../types';
+import { Profile, AppData, Alert, CryptoCurrency, Page, cryptoAssetTypes, VaultItem } from '../types';
 import { TrashIcon, SparklesIcon, SpinnerIcon } from '../components/icons/Icons';
 
 interface ProfilePageProps {
   profile: Profile;
   setProfile: React.Dispatch<React.SetStateAction<Profile>>;
-  allData: Omit<AppData, 'schemaVersion'>;
-  loadAllData: (data: AppData) => void;
+  allData: Omit<AppData, 'schemaVersion'> & { vaultItems: VaultItem[] };
+  loadAllData: (data: AppData & { vaultItems?: VaultItem[] }) => void;
   alerts: Alert[];
   setAlerts: React.Dispatch<React.SetStateAction<Alert[]>>;
   cryptoCurrencies: CryptoCurrency[];
@@ -208,7 +208,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ profile, setProfile, allData,
 
 
   const handleExportData = () => {
-    const dataToExport: AppData = { ...allData, settings: (allData as AppData).settings, schemaVersion: 1 };
+    const dataToExport = { ...allData, schemaVersion: 1 };
     const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(JSON.stringify(dataToExport, null, 2))}`;
     const link = document.createElement("a");
     link.href = jsonString;
@@ -229,7 +229,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ profile, setProfile, allData,
       try {
         const text = e.target?.result;
         if (typeof text !== 'string') throw new Error("File content is not valid text.");
-        const importedData: AppData = JSON.parse(text);
+        const importedData: AppData & { vaultItems?: VaultItem[] } = JSON.parse(text);
         
         if (importedData.schemaVersion !== 1) {
             throw new Error(`Unsupported schema version. Expected 1, got ${importedData.schemaVersion}.`);

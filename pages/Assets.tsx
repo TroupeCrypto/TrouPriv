@@ -6,7 +6,7 @@ import AssetForm from '../components/AssetForm';
 import ConfirmationDialog from '../components/ConfirmationDialog';
 import CsvImportModal from '../components/CsvImportModal';
 import { SparklesIcon, WalletIcon, SpinnerIcon } from '../components/icons/Icons';
-import { ethers } from 'ethers';
+import * as ethers from 'ethers';
 
 interface MintModalProps {
     assetToMint: Asset;

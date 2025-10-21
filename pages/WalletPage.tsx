@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ethers } from 'ethers';
+import * as ethers from 'ethers';
 import { Web3Wallet } from '../types';
 import { WalletIcon, KeyIcon, SpinnerIcon, ArrowUpRightIcon, ArrowDownLeftIcon, CheckCircleIcon, XCircleIcon } from '../components/icons/Icons';
 import { useVault } from '../contexts/VaultContext';
@@ -104,24 +104,13 @@ const WalletPage: React.FC<WalletPageProps> = ({ web3Wallet, setWeb3Wallet }) =>
 
         setIsConnecting(true);
         try {
-            const provider = new ethers.BrowserProvider(window.ethereum);
-            await provider.send("eth_requestAccounts", []);
-            
-            const signer = await provider.getSigner();
-            const address = await signer.getAddress();
-            const balanceWei = await provider.getBalance(address);
-            const balanceEth = ethers.formatEther(balanceWei);
-            const network = await provider.getNetwork();
-
-            setWeb3Wallet({
-                address: address,
-                balance: parseFloat(balanceEth),
-                network: network.name,
-            });
+            // Simply request accounts. The listener in App.tsx will handle the state updates.
+            await window.ethereum.request({ method: 'eth_requestAccounts' });
         } catch (error: any) {
-            console.error("Failed to connect wallet:", error);
-            const errorMessage = error.reason || error.message || "An unknown error occurred.";
-            alert(`Failed to connect wallet. ${errorMessage}`);
+            console.error("Failed to request accounts:", error);
+            if (error.code !== 4001) { // 4001 is user rejection, which is not an app error.
+                 alert(`Failed to connect wallet: ${error.message}`);
+            }
         } finally {
             setIsConnecting(false);
         }
@@ -148,9 +137,7 @@ const WalletPage: React.FC<WalletPageProps> = ({ web3Wallet, setWeb3Wallet }) =>
             await txResponse.wait();
             setTxStatus('success');
             
-            // Refresh balance
-            const balanceWei = await provider.getBalance(web3Wallet.address);
-            setWeb3Wallet(prev => prev ? { ...prev, balance: parseFloat(ethers.formatEther(balanceWei)) } : null);
+            // The balance will be refreshed automatically by the listeners in App.tsx after a short delay.
             setRecipient('');
             setAmount('');
             setTimeout(() => fetchTransactions(web3Wallet.address), 5000); // Refresh transactions after 5s
@@ -163,7 +150,12 @@ const WalletPage: React.FC<WalletPageProps> = ({ web3Wallet, setWeb3Wallet }) =>
         }
     };
 
-    const handleDisconnect = () => setWeb3Wallet(null);
+    const handleDisconnect = () => {
+        // Disconnecting is handled by the user in their wallet. 
+        // We clear our state, and the `accountsChanged` listener will confirm it.
+        setWeb3Wallet(null);
+        // Future versions might use wallet-specific disconnect methods if available.
+    };
 
     const commonInputStyle = "w-full bg-gray-800/50 border border-white/10 rounded-md px-4 py-2 text-white focus:ring-2 focus:ring-fuchsia-500 focus:outline-none";
 
@@ -198,7 +190,7 @@ const WalletPage: React.FC<WalletPageProps> = ({ web3Wallet, setWeb3Wallet }) =>
                                     </div>
                                 </div>
                                 <button onClick={handleDisconnect} className="w-full mt-4 bg-red-600/80 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-md transition-colors">
-                                    Disconnect Wallet
+                                    Disconnect
                                 </button>
                             </div>
                         ) : (

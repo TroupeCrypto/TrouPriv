@@ -1,7 +1,8 @@
 
+
 import React from 'react';
 // FIX: Use relative paths for local modules
-import { CodeIcon, NftCollectionIcon } from '../components/icons/Icons';
+import { CodeIcon, NftCollectionIcon, SparklesIcon } from '../components/icons/Icons';
 // FIX: Use relative paths for local modules
 import { Page } from '../types';
 
@@ -41,21 +42,21 @@ const WebDev: React.FC<{ setPage: (page: Page) => void }> = ({ setPage }) => {
       <section>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <DevCategoryCard
-                title="Code"
-                description="Conceptualize, create, and design software with an integrated suite of tools."
+                title="Smart Contract Builder"
+                description="Generate, compile, and deploy ERC smart contracts with ease."
                 icon={<CodeIcon className="w-8 h-8" />}
-                onClick={() => setPage(Page.Code)}
+                onClick={() => setPage(Page.SmartContractBuilder)}
             />
             <DevCategoryCard
-                title="Web3 Tools"
-                description="Access tools for blockchain, smart contracts, and NFT development."
+                title="Psychedelic NFT Workshop"
+                description="Conceptualize and create unique digital art with the power of AI."
                 icon={<NftCollectionIcon className="w-8 h-8" />}
-                onClick={() => setPage(Page.Web3Tools)}
+                onClick={() => setPage(Page.PsychedelicNftWorkshop)}
             />
             <DevCategoryCard
                 title="Prompt Studio"
-                description="Test Gemini prompts and generate text-based assets."
-                icon={<CodeIcon className="w-8 h-8" />}
+                description="A creative space to experiment with and refine generative AI prompts."
+                icon={<SparklesIcon className="w-8 h-8" />}
                 onClick={() => setPage(Page.PromptStudio)}
             />
         </div>

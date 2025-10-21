@@ -2,8 +2,8 @@
 
 // FIX: Corrected the import statement for React hooks.
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import * as ethers from 'ethers';
 import { Page, Asset, CryptoCurrency, VaultItem, Alert, Profile, AppSettings, PortfolioHistoryPoint, cryptoAssetTypes, AssetCategory, AppData, Position, Web3Wallet, DeploymentTransaction, BrandAuthConfig, AIPersona, AIProtocol, AIMemoryItem, ChatMessage } from './types';
-import { brandAuthConfigs as initialSocialAuth } from './data/socialAuth';
 import { get, set } from './utils/storage';
 import { fetchCryptoPrices } from './services/cryptoService';
 import Dashboard from './pages/Dashboard';
@@ -17,7 +17,6 @@ import Social from './pages/Social';
 import Header, { SaveStatus } from './components/Header';
 import { psychedelicBackgrounds } from './data/backgrounds';
 import PromptStudio from './pages/PromptStudio';
-import Web3Tools from './pages/Web3Tools';
 import PsychedelicNftWorkshop from './pages/PsychedelicNftWorkshop';
 import ManageCategories from './pages/ManageCategories';
 import ProFolioPage from './pages/NftCollections';
@@ -39,10 +38,9 @@ import ChatPage from './pages/ChatPage';
 const initialState: Omit<AppData, 'schemaVersion'> = {
     assets: [],
     cryptoCurrencies: [],
-    vaultItems: [],
     alerts: [],
     profile: {
-        name: 'Digital Voyager',
+        name: '',
         avatarUrl: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iY3VycmVudENvbG9yIj48cGF0aCBkPSJNMTIgMmM1LjUyMyAwIDEwIDQuNDc3IDEwIDEwcy00LjQ3NyAxMC0xMCAxMFMxMiAxNy41MjMgMiAxMiA2LjQ3NyAyIDEyIDJ6bTAgM2E3IDcgMCAxMDAgMTQgNyA3IDAgMDAwLTE0em0wIDNhNCA0IDAgMTEwIDggNCA0IDAgMDEwLTgiLz48L3N2Zz4=',
         bio: '',
         website: ''
@@ -51,7 +49,7 @@ const initialState: Omit<AppData, 'schemaVersion'> = {
         defaultCurrency: 'USD',
         notificationsEnabled: true
     },
-    socialAuth: initialSocialAuth,
+    socialAuth: [],
     assetCategories: [
         { id: 'crypto', name: 'Cryptocurrency', group: 'Digital Assets' },
         { id: 'nft-art', name: 'NFT - Art', group: 'Digital Assets' },
@@ -89,14 +87,10 @@ const App: React.FC = () => {
   const [page, setPage] = useState<Page>(() => get<Page>('currentPage', Page.Dashboard));
   const [appData, setAppData] = useState<Omit<AppData, 'schemaVersion'>>(() => {
     const savedData = get<Omit<AppData, 'schemaVersion'> | null>('appData', null);
-    if (savedData) {
-        return {
-            ...initialState,
-            ...savedData,
-        };
-    }
-    return initialState;
+    // Prioritize saved data completely to prevent accidental overwrites or merges.
+    return savedData || initialState;
   });
+  const [vaultItems, setVaultItems] = useState<VaultItem[]>(() => get('vaultItems', []));
   
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const [portfolioHistory, setPortfolioHistory] = useState<PortfolioHistoryPoint[]>(() => get('portfolioHistory', []));
@@ -104,23 +98,26 @@ const App: React.FC = () => {
 
   const timeoutRef = useRef<number | null>(null);
 
-  const loadAllData = useCallback((data: AppData) => {
-    const { schemaVersion, ...rest } = data; // eslint-disable-line @typescript-eslint/no-unused-vars
+  const setWeb3Wallet = useCallback((value: React.SetStateAction<Web3Wallet | null>) => setAppData(prev => ({...prev, web3Wallet: typeof value === 'function' ? value(prev.web3Wallet ?? null) : value })), []);
+
+  const loadAllData = useCallback((data: AppData & { vaultItems?: VaultItem[] }) => {
+    const { schemaVersion, vaultItems: importedVaultItems, ...rest } = data; // eslint-disable-line @typescript-eslint/no-unused-vars
     setAppData(rest);
+    if (importedVaultItems) {
+        setVaultItems(importedVaultItems);
+    }
     setPage(Page.Dashboard);
   }, []);
 
   // Centralized state setters
   const setAssets = useCallback((value: React.SetStateAction<Asset[]>) => setAppData(prev => ({...prev, assets: typeof value === 'function' ? value(prev.assets) : value })), []);
   const setCryptoCurrencies = useCallback((value: React.SetStateAction<CryptoCurrency[]>) => setAppData(prev => ({...prev, cryptoCurrencies: typeof value === 'function' ? value(prev.cryptoCurrencies) : value })), []);
-  const setVaultItems = useCallback((value: React.SetStateAction<VaultItem[]>) => setAppData(prev => ({...prev, vaultItems: typeof value === 'function' ? value(prev.vaultItems) : value })), []);
   const setAlerts = useCallback((value: React.SetStateAction<Alert[]>) => setAppData(prev => ({...prev, alerts: typeof value === 'function' ? value(prev.alerts) : value })), []);
   const setProfile = useCallback((value: React.SetStateAction<Profile>) => setAppData(prev => ({...prev, profile: typeof value === 'function' ? value(prev.profile) : value })), []);
   const setSettings = useCallback((value: React.SetStateAction<AppSettings>) => setAppData(prev => ({...prev, settings: typeof value === 'function' ? value(prev.settings) : value })), []);
   const setSocialAuth = useCallback((value: React.SetStateAction<BrandAuthConfig[]>) => setAppData(prev => ({...prev, socialAuth: typeof value === 'function' ? value(prev.socialAuth) : value })), []);
   const setAssetCategories = useCallback((value: React.SetStateAction<AssetCategory[]>) => setAppData(prev => ({...prev, assetCategories: typeof value === 'function' ? value(prev.assetCategories) : value })), []);
   const setPositions = useCallback((value: React.SetStateAction<Position[]>) => setAppData(prev => ({...prev, positions: typeof value === 'function' ? value(prev.positions) : value })), []);
-  const setWeb3Wallet = useCallback((value: React.SetStateAction<Web3Wallet | null>) => setAppData(prev => ({...prev, web3Wallet: typeof value === 'function' ? value(prev.web3Wallet ?? null) : value })), []);
   const setDeploymentTransactions = useCallback((value: React.SetStateAction<DeploymentTransaction[]>) => setAppData(prev => ({...prev, deploymentTransactions: typeof value === 'function' ? value(prev.deploymentTransactions || []) : value })), []);
   const setAiPersona = useCallback((value: React.SetStateAction<AIPersona>) => setAppData(prev => ({...prev, aiPersona: typeof value === 'function' ? value(prev.aiPersona) : value })), []);
   const setAiProtocols = useCallback((value: React.SetStateAction<AIProtocol[]>) => setAppData(prev => ({...prev, aiProtocols: typeof value === 'function' ? value(prev.aiProtocols) : value })), []);
@@ -128,7 +125,7 @@ const App: React.FC = () => {
   const setChatHistory = useCallback((value: React.SetStateAction<ChatMessage[]>) => setAppData(prev => ({...prev, chatHistory: typeof value === 'function' ? value(prev.chatHistory) : value })), []);
 
 
-  // Auto-save data
+  // Auto-save app data (excluding vault)
   useEffect(() => {
     if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
@@ -150,6 +147,12 @@ const App: React.FC = () => {
         }
     };
   }, [appData]);
+  
+  // Auto-save vault data separately
+  useEffect(() => {
+      set('vaultItems', vaultItems);
+  }, [vaultItems]);
+
 
   // Save current page
   useEffect(() => {
@@ -205,35 +208,58 @@ const App: React.FC = () => {
     }
   }, [appData.assets, appData.cryptoCurrencies, portfolioHistory]);
 
-  // Effect for handling wallet events
-  useEffect(() => {
-    const handleAccountsChanged = (accounts: string[]) => {
-      if (accounts.length === 0) {
-        console.log('Wallet disconnected.');
-        setWeb3Wallet(null);
-      } else if (appData.web3Wallet && accounts[0] !== appData.web3Wallet.address) {
-        console.log('Account changed, disconnecting.');
-        setWeb3Wallet(null);
-      }
-    };
-
-    const handleChainChanged = () => {
-      console.log('Network changed, disconnecting.');
-      setWeb3Wallet(null);
-    };
-
-    if (window.ethereum) {
-      window.ethereum.on('accountsChanged', handleAccountsChanged);
-      window.ethereum.on('chainChanged', handleChainChanged);
-
-      return () => {
-        if (window.ethereum.removeListener) {
-            window.ethereum.removeListener('accountsChanged', handleAccountsChanged);
-            window.ethereum.removeListener('chainChanged', handleChainChanged);
+  // Centralized wallet state management
+    const updateWalletState = useCallback(async () => {
+        if (!window.ethereum) return;
+        try {
+            const provider = new ethers.BrowserProvider(window.ethereum);
+            const accounts = await provider.listAccounts();
+            if (accounts.length > 0) {
+                const signer = accounts[0]; // Directly use the account object
+                const balanceWei = await provider.getBalance(signer.address);
+                const balanceEth = ethers.formatEther(balanceWei);
+                const network = await provider.getNetwork();
+                setWeb3Wallet({
+                    address: signer.address,
+                    balance: parseFloat(balanceEth),
+                    network: network.name,
+                });
+            } else {
+                setWeb3Wallet(null);
+            }
+        } catch (error) {
+            console.error("Could not update wallet state:", error);
+            setWeb3Wallet(null);
         }
-      };
-    }
-  }, [appData.web3Wallet, setWeb3Wallet]);
+    }, [setWeb3Wallet]);
+
+    // Effect for handling wallet events
+    useEffect(() => {
+        const handleAccountsChanged = () => {
+            console.log('Wallet account changed.');
+            updateWalletState();
+        };
+
+        const handleChainChanged = () => {
+            console.log('Wallet network changed.');
+            updateWalletState();
+        };
+
+        if (window.ethereum?.on) {
+            window.ethereum.on('accountsChanged', handleAccountsChanged);
+            window.ethereum.on('chainChanged', handleChainChanged);
+
+            // Check for existing connection on app load
+            updateWalletState();
+
+            return () => {
+                if (window.ethereum.removeListener) {
+                    window.ethereum.removeListener('accountsChanged', handleAccountsChanged);
+                    window.ethereum.removeListener('chainChanged', handleChainChanged);
+                }
+            };
+        }
+    }, [updateWalletState]);
 
   const renderPage = () => {
     switch (page) {
@@ -242,11 +268,11 @@ const App: React.FC = () => {
       case Page.Assets:
         return <AssetsPage assets={appData.assets} setAssets={setAssets} cryptoCurrencies={appData.cryptoCurrencies} assetCategories={appData.assetCategories} setAssetCategories={setAssetCategories} deploymentTransactions={appData.deploymentTransactions} web3Wallet={appData.web3Wallet} />;
       case Page.Vault:
-        return <VaultPage vaultItems={appData.vaultItems} setVaultItems={setVaultItems} />;
+        return <VaultPage vaultItems={vaultItems} setVaultItems={setVaultItems} />;
       case Page.Profile:
-        return <ProfilePage profile={appData.profile} setProfile={setProfile} allData={appData} loadAllData={loadAllData} alerts={appData.alerts} setAlerts={setAlerts} cryptoCurrencies={appData.cryptoCurrencies} setPage={setPage} />;
+        return <ProfilePage profile={appData.profile} setProfile={setProfile} allData={{...appData, vaultItems}} loadAllData={loadAllData} alerts={appData.alerts} setAlerts={setAlerts} cryptoCurrencies={appData.cryptoCurrencies} setPage={setPage} />;
       case Page.Settings:
-        return <SettingsPage settings={appData.settings} setSettings={setSettings} setPage={setPage} appData={appData} setAppData={setAppData} />;
+        return <SettingsPage settings={appData.settings} setSettings={setSettings} setPage={setPage} appData={appData} setAppData={setAppData} vaultItems={vaultItems} setVaultItems={setVaultItems} />;
       case Page.WebDev:
         return <WebDev setPage={setPage} />;
       case Page.Business:
@@ -255,15 +281,13 @@ const App: React.FC = () => {
         return <Social socialAuth={appData.socialAuth} setSocialAuth={setSocialAuth} />;
       case Page.PromptStudio:
         return <PromptStudio setPage={setPage} />;
-      case Page.Web3Tools:
-        return <Web3Tools setPage={setPage} />;
       case Page.PsychedelicNftWorkshop:
         return <PsychedelicNftWorkshop setPage={setPage} setAssets={setAssets} assetCategories={appData.assetCategories} />;
       case Page.ManageCategories:
         return <ManageCategories assetCategories={appData.assetCategories} setAssetCategories={setAssetCategories} setPage={setPage} />;
       case Page.ProFolio:
         return <ProFolioPage assets={appData.assets} setAssets={setAssets} setPage={setPage} profile={appData.profile} socialAuth={appData.socialAuth} />;
-      case Page.Code:
+      case Page.SmartContractBuilder:
         return <CodePage setPage={setPage} deploymentTransactions={appData.deploymentTransactions} setDeploymentTransactions={setDeploymentTransactions} />;
       case Page.Conceptualize:
         return <ConceptualizePage setPage={setPage} />;
@@ -272,9 +296,9 @@ const App: React.FC = () => {
       case Page.Design:
         return <DesignPage setPage={setPage} />;
       case Page.Wallet:
-        return <WalletPage web3Wallet={appData.web3Wallet} setWeb3Wallet={setWeb3Wallet} vaultItems={appData.vaultItems} />;
+        return <WalletPage web3Wallet={appData.web3Wallet} setWeb3Wallet={setWeb3Wallet} vaultItems={vaultItems} />;
       case Page.AIStudio:
-        return <AIStudio setPage={setPage} vaultItems={appData.vaultItems} />;
+        return <AIStudio setPage={setPage} vaultItems={vaultItems} />;
       case Page.Persona:
         return <PersonaPage aiPersona={appData.aiPersona} setAiPersona={setAiPersona} aiMemory={appData.aiMemory} />;
       case Page.Learning:
@@ -284,7 +308,7 @@ const App: React.FC = () => {
       case Page.BusinessMeeting:
         return <BusinessMeetingPage allData={appData} />;
       case Page.Chat:
-        return <ChatPage chatHistory={appData.chatHistory} setChatHistory={setChatHistory} aiPersona={appData.aiPersona} aiProtocols={appData.aiProtocols} vaultItems={appData.vaultItems} />;
+        return <ChatPage chatHistory={appData.chatHistory} setChatHistory={setChatHistory} aiPersona={appData.aiPersona} aiProtocols={appData.aiProtocols} vaultItems={vaultItems} />;
       default:
         return <Dashboard assets={appData.assets} cryptoCurrencies={appData.cryptoCurrencies} setCryptoCurrencies={setCryptoCurrencies} portfolioHistory={portfolioHistory} assetCategories={appData.assetCategories} />;
     }
@@ -294,7 +318,7 @@ const App: React.FC = () => {
 
   return (
     <MasterPasswordProvider>
-        <VaultProvider vaultItems={appData.vaultItems}>
+        <VaultProvider vaultItems={vaultItems}>
             <div
                 className="min-h-screen bg-cover bg-center bg-fixed transition-all duration-1000"
                 style={{ backgroundImage: currentBackground }}

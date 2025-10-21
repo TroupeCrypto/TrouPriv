@@ -1,4 +1,5 @@
 
+
 import React, { useState } from 'react';
 import { GoogleGenAI, Type } from "@google/genai";
 import { Page } from '../types';
@@ -79,7 +80,8 @@ const DesignPage: React.FC<DesignPageProps> = ({ setPage }) => {
           <DesignIcon className="w-8 h-8 text-cyan-400" />
           <div>
             <h1 className="text-3xl font-bold text-white">Design</h1>
-            <button onClick={() => setPage(Page.Code)} className="text-sm text-cyan-400 hover:underline">&larr; Back to Code</button>
+            {/* FIX: Replaced non-existent 'Page.Code' with 'Page.WebDev' and updated link text. */}
+            <button onClick={() => setPage(Page.WebDev)} className="text-sm text-cyan-400 hover:underline">&larr; Back to Web-Dev</button>
           </div>
         </div>
       </header>

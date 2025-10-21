@@ -1,6 +1,6 @@
 
 import React, { createContext, useState, useCallback, useContext } from 'react';
-import { AppData } from '../types';
+import { AppData, VaultItem } from '../types';
 import { decrypt, encrypt } from '../utils/encryption';
 import { get as getData, set as saveData, remove as removeData } from '../utils/storage';
 
@@ -16,8 +16,8 @@ interface MasterPasswordContextType {
     changeMasterPassword: (
         oldPassword: string, 
         newPassword: string, 
-        appData: Omit<AppData, 'schemaVersion'>,
-        setAppData: React.Dispatch<React.SetStateAction<Omit<AppData, 'schemaVersion'>>>
+        vaultItems: VaultItem[],
+        setVaultItems: React.Dispatch<React.SetStateAction<VaultItem[]>>
     ) => Promise<void>;
     setInitialMasterPassword: (password: string) => Promise<void>;
 }
@@ -108,78 +108,29 @@ export const MasterPasswordProvider: React.FC<{ children: React.ReactNode }> = (
     const changeMasterPassword = useCallback(async (
         oldPassword: string,
         newPassword: string,
-        _appData_stale: Omit<AppData, 'schemaVersion'>,
-        setAppData: React.Dispatch<React.SetStateAction<Omit<AppData, 'schemaVersion'>>>
+        vaultItems: VaultItem[],
+        setVaultItems: React.Dispatch<React.SetStateAction<VaultItem[]>>
     ) => {
-        const backupAppDataKey = 'appData_backup_pwd_change';
-        const backupVerificationKey = `${VAULT_VERIFICATION_KEY}_backup_pwd_change`;
+        // 1. Perform re-encryption on the current state of vault items
+        const reEncryptedItems = await Promise.all(
+            vaultItems.map(async (item) => {
+                const decryptedContentStr = await decrypt(item.encryptedContent, oldPassword);
+                const reEncryptedContent = await encrypt(decryptedContentStr, newPassword);
+                return { ...item, encryptedContent: reEncryptedContent };
+            })
+        );
 
-        // 1. Get current state and create backups
-        const latestAppData = getData<Omit<AppData, 'schemaVersion'> | null>('appData', null);
-        if (!latestAppData) {
-            throw new Error("Could not retrieve latest data for re-encryption. Operation aborted.");
-        }
-        const verificationItem = getData<string | null>(VAULT_VERIFICATION_KEY, null);
-        if (!verificationItem) {
-            throw new Error("Could not retrieve verification key. Operation aborted.");
-        }
+        // 2. Create the new verification key
+        const newVerificationItem = await encrypt(VERIFICATION_STRING, newPassword);
+        
+        // 3. Update the state and persisted storage
+        setVaultItems(reEncryptedItems); // This will trigger the useEffect in App.tsx to save it
+        saveData(VAULT_VERIFICATION_KEY, newVerificationItem); // Save the new verification key
+        
+        // 4. Update the active master password in the context and session storage
+        setMasterPassword(newPassword);
+        sessionStorage.setItem(SESSION_STORAGE_KEY, newPassword);
 
-        saveData(backupAppDataKey, latestAppData);
-        saveData(backupVerificationKey, verificationItem);
-
-        try {
-            // 2. Perform re-encryption
-            const reEncryptedItems = await Promise.all(
-                latestAppData.vaultItems.map(async (item) => {
-                    const decryptedContentStr = await decrypt(item.encryptedContent, oldPassword);
-                    const reEncryptedContent = await encrypt(decryptedContentStr, newPassword);
-                    return { ...item, encryptedContent: reEncryptedContent };
-                })
-            );
-
-            const newVerificationItem = await encrypt(VERIFICATION_STRING, newPassword);
-            const newAppData = { ...latestAppData, vaultItems: reEncryptedItems };
-            
-            // 3. Atomically update data (as best as possible with localStorage)
-            const appDataSuccess = saveData('appData', newAppData);
-            if (!appDataSuccess) {
-                throw new Error("Failed to save re-encrypted app data.");
-            }
-            
-            const verificationSuccess = saveData(VAULT_VERIFICATION_KEY, newVerificationItem);
-            if (!verificationSuccess) {
-                throw new Error("CRITICAL: Failed to save new verification key after re-encrypting data.");
-            }
-            
-            // 4. Update React state and session
-            setAppData(newAppData);
-            setMasterPassword(newPassword);
-            sessionStorage.setItem(SESSION_STORAGE_KEY, newPassword);
-
-            // 5. Clean up backups on success
-            removeData(backupAppDataKey);
-            removeData(backupVerificationKey);
-
-        } catch (error) {
-            // 6. Rollback on failure
-            const backupAppData = getData<Omit<AppData, 'schemaVersion'> | null>(backupAppDataKey, null);
-            const backupVerification = getData<string | null>(backupVerificationKey, null);
-
-            if (backupAppData) {
-                saveData('appData', backupAppData);
-            }
-            if (backupVerification) {
-                saveData(VAULT_VERIFICATION_KEY, backupVerification);
-            }
-
-            // Clean up backups
-            removeData(backupAppDataKey);
-            removeData(backupVerificationKey);
-            
-            // Re-throw error to be caught by the UI
-            throw error;
-        }
-    // FIX: `setAppData` is a parameter, not a dependency. The hook depends on `setMasterPassword` from its closure.
     }, [setMasterPassword]);
 
     const value = {

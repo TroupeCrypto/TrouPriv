@@ -1,9 +1,9 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { ethers } from 'ethers';
+import * as ethers from 'ethers';
 import { Page, DeploymentTransaction } from '../types';
 import { blockchains, getBlockchainByChainId } from '../data/blockchains';
-import Editor from 'react-simple-code-editor';
+import { default as Editor } from 'react-simple-code-editor';
 import prism from 'prismjs';
 import 'prismjs/components/prism-solidity';
 import { CodeIcon, CompileIcon, DeployIcon, WalletIcon, TerminalIcon, ChevronUpIcon, ChevronDownIcon, TrashIcon, SpinnerIcon } from '../components/icons/Icons';

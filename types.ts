@@ -5,11 +5,9 @@ export enum Page {
   Assets = 'Assets',
   ProFolio = 'ProFolio',
   WebDev = 'WebDev',
-  Code = 'Code',
   Conceptualize = 'Conceptualize',
   Create = 'Create',
   Design = 'Design',
-  Web3Tools = 'Web3Tools',
   SmartContractBuilder = 'SmartContractBuilder',
   PsychedelicNftWorkshop = 'PsychedelicNftWorkshop',
   PromptStudio = 'PromptStudio',
@@ -214,7 +212,6 @@ export interface AppData {
   schemaVersion: number;
   assets: Asset[];
   cryptoCurrencies: CryptoCurrency[];
-  vaultItems: VaultItem[];
   alerts: Alert[];
   profile: Profile;
   settings: AppSettings;

@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { AppData } from '../types';
+import { AppData, VaultItem } from '../types';
 import { useMasterPassword } from '../contexts/MasterPasswordContext';
 import { SpinnerIcon } from './icons/Icons';
 
@@ -9,9 +9,11 @@ interface ChangePasswordModalProps {
   onClose: () => void;
   appData: Omit<AppData, 'schemaVersion'>;
   setAppData: React.Dispatch<React.SetStateAction<Omit<AppData, 'schemaVersion'>>>;
+  vaultItems: VaultItem[];
+  setVaultItems: React.Dispatch<React.SetStateAction<VaultItem[]>>;
 }
 
-const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen, onClose, appData, setAppData }) => {
+const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen, onClose, appData, setAppData, vaultItems, setVaultItems }) => {
     const { masterPassword, changeMasterPassword, clearPassword } = useMasterPassword();
     const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
@@ -58,8 +60,7 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen, onClo
         setIsProcessing(true);
 
         try {
-            // Pass setAppData directly; the function now handles getting the latest appData internally.
-            await changeMasterPassword(currentPassword, newPassword, appData, setAppData);
+            await changeMasterPassword(currentPassword, newPassword, vaultItems, setVaultItems);
             
             setSuccess("Master password changed successfully!");
             setTimeout(handleClose, 2000);

@@ -303,7 +303,8 @@ const PsychedelicNftWorkshop: React.FC<{
                     <CodeIcon className="w-8 h-8 text-fuchsia-400" />
                     <div>
                         <h1 className="text-3xl font-bold text-white">Psychedelic NFT Workshop</h1>
-                        <button onClick={() => setPage(Page.Web3Tools)} className="text-sm text-cyan-400 hover:underline">&larr; Back to Web3 Tools</button>
+                        {/* FIX: Replaced non-existent 'Page.Web3Tools' with 'Page.WebDev' and updated link text. */}
+                        <button onClick={() => setPage(Page.WebDev)} className="text-sm text-cyan-400 hover:underline">&larr; Back to Web-Dev</button>
                     </div>
                 </div>
             </header>

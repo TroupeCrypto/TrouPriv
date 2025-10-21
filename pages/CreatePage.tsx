@@ -1,8 +1,9 @@
 
+
 import React, { useState } from 'react';
 import { GoogleGenAI } from "@google/genai";
 import { Page } from '../types';
-import Editor from 'react-simple-code-editor';
+import { default as Editor } from 'react-simple-code-editor';
 import prism from 'prismjs';
 import 'prismjs/components/prism-javascript';
 import 'prismjs/components/prism-typescript';
@@ -22,7 +23,7 @@ interface CreatePageProps {
 }
 
 const CreatePage: React.FC<CreatePageProps> = ({ setPage }) => {
-    const [code, setCode] = useState('function helloWorld() {\n  console.log("Hello, World!");\n}');
+    const [code, setCode] = useState('');
     const [language, setLanguage] = useState<Language>('javascript');
     const [isLoading, setIsLoading] = useState(false);
     const [aiResponse, setAiResponse] = useState('');
@@ -79,7 +80,8 @@ const CreatePage: React.FC<CreatePageProps> = ({ setPage }) => {
           <CreateIcon className="w-8 h-8 text-cyan-400" />
           <div>
             <h1 className="text-3xl font-bold text-white">Create</h1>
-            <button onClick={() => setPage(Page.Code)} className="text-sm text-cyan-400 hover:underline">&larr; Back to Code</button>
+            {/* FIX: Replaced non-existent 'Page.Code' with 'Page.WebDev' and updated link text. */}
+            <button onClick={() => setPage(Page.WebDev)} className="text-sm text-cyan-400 hover:underline">&larr; Back to Web-Dev</button>
           </div>
         </div>
       </header>

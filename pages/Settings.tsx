@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { AppSettings, Page, AppData } from '../types';
+import { AppSettings, Page, AppData, VaultItem } from '../types';
 import { SettingsIcon, KeyIcon } from '../components/icons/Icons';
 import { useMasterPassword } from '../contexts/MasterPasswordContext';
 import ChangePasswordModal from '../components/ChangePasswordModal';
@@ -10,9 +10,11 @@ interface SettingsPageProps {
     setPage: (page: Page) => void;
     appData: Omit<AppData, 'schemaVersion'>;
     setAppData: React.Dispatch<React.SetStateAction<Omit<AppData, 'schemaVersion'>>>;
+    vaultItems: VaultItem[];
+    setVaultItems: React.Dispatch<React.SetStateAction<VaultItem[]>>;
 }
 
-const SettingsPage: React.FC<SettingsPageProps> = ({ settings, setSettings, setPage, appData, setAppData }) => {
+const SettingsPage: React.FC<SettingsPageProps> = ({ settings, setSettings, setPage, appData, setAppData, vaultItems, setVaultItems }) => {
     const { isUnlocked } = useMasterPassword();
     const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] = useState(false);
 
@@ -95,6 +97,8 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ settings, setSettings, setP
                 onClose={() => setIsChangePasswordModalOpen(false)}
                 appData={appData}
                 setAppData={setAppData}
+                vaultItems={vaultItems}
+                setVaultItems={setVaultItems}
             />
         </div>
     );

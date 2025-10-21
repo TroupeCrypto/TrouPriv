@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { GoogleGenAI, Modality, Type } from "@google/genai";
 // FIX: Use relative paths for local modules
@@ -184,7 +185,7 @@ const AssetForm: React.FC<AssetFormProps> = ({ onSave, onCancel, cryptoCurrencie
             const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
             const response = await ai.models.generateContent({
                 model: 'gemini-2.5-flash',
-                contents: fullPrompt,
+                contents: { parts: [{ text: fullPrompt }] },
             });
 
             setDescription(response.text.trim());
@@ -220,7 +221,7 @@ const AssetForm: React.FC<AssetFormProps> = ({ onSave, onCancel, cryptoCurrencie
             const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
             const response = await ai.models.generateContent({
                 model: 'gemini-2.5-flash',
-                contents: prompt,
+                contents: { parts: [{ text: prompt }] },
                 config: {
                     responseMimeType: "application/json",
                     responseSchema: {
@@ -290,7 +291,7 @@ const AssetForm: React.FC<AssetFormProps> = ({ onSave, onCancel, cryptoCurrencie
             quantity: quantity ? parseFloat(quantity) : undefined,
             cryptoId: cryptoAssetTypes.includes(categoryId) ? cryptoId : undefined,
             description,
-            imageUrl: uploadedImageUrl || (nftAssetTypes.includes(categoryId) && contractAddress && tokenId ? `https://picsum.photos/seed/${contractAddress}${tokenId}/300/200` : category?.name === 'Real Estate' ? `https://picsum.photos/seed/${address.replace(/\s/g, '')}/300/200` : undefined),
+            imageUrl: uploadedImageUrl,
             contractAddress: nftAssetTypes.includes(categoryId) ? contractAddress : undefined,
             tokenId: nftAssetTypes.includes(categoryId) ? tokenId : undefined,
             tokenStandard: nftAssetTypes.includes(categoryId) ? tokenStandard : undefined,

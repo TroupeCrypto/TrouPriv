@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { GoogleGenAI, Type } from "@google/genai";
 // FIX: Use relative paths for local modules
@@ -15,7 +16,7 @@ interface ResponseHistoryItem {
 }
 
 const PromptStudio: React.FC<{ setPage: (page: Page) => void }> = ({ setPage }) => {
-    const [prompt, setPrompt] = useState(() => get('promptStudio_prompt', 'Write a story about a psychedelic turtle that discovers the meaning of the universe.'));
+    const [prompt, setPrompt] = useState(() => get('promptStudio_prompt', ''));
     const [response, setResponse] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
@@ -30,7 +31,8 @@ const PromptStudio: React.FC<{ setPage: (page: Page) => void }> = ({ setPage }) 
     const [isGeneratingSuggestions, setIsGeneratingSuggestions] = useState(false);
     const [suggestionError, setSuggestionError] = useState<string | null>(null);
 
-    const appCategories = [Page.Dashboard, Page.Assets, Page.Business, Page.Web3Tools, Page.Social, Page.Vault];
+    // FIX: Replaced non-existent 'Page.Web3Tools' with 'Page.WebDev'.
+    const appCategories = [Page.Dashboard, Page.Assets, Page.Business, Page.WebDev, Page.Social, Page.Vault];
 
 
     // Auto-save prompt to localStorage
@@ -133,7 +135,7 @@ const PromptStudio: React.FC<{ setPage: (page: Page) => void }> = ({ setPage }) 
             const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
             const response = await ai.models.generateContent({
                 model: 'gemini-2.5-flash',
-                contents: generationPrompt,
+                contents: { parts: [{ text: generationPrompt }] },
                 config: {
                     responseMimeType: "application/json",
                     responseSchema: { type: Type.ARRAY, items: { type: Type.STRING } }

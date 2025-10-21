@@ -142,401 +142,235 @@ const VaultPage: React.FC<VaultPageProps> = ({ vaultItems, setVaultItems }) => {
             websiteForSave = newItemWebsite;
         } else if (newItemType === 'apiKey') {
             if (!newItemContent || !newItemWebsite) {
-                alert("Please fill out the API Key and its Website/Service.");
+                alert("Please fill out Key/Secret and Website for API Keys.");
                 return;
             }
             contentToEncrypt = JSON.stringify({ key: newItemContent, notes: newItemNotes });
             websiteForSave = newItemWebsite;
-        } else { // secret
+        } else { // 'secret'
             if (!newItemContent) {
-                alert("Please fill out the secret content.");
+                alert("Please provide the secret content.");
                 return;
             }
             contentToEncrypt = newItemContent;
+            websiteForSave = newItemWebsite || undefined;
         }
 
         if (!masterPassword) {
-            alert("Vault must be unlocked to add a new item.");
+            alert("Vault is locked. Cannot add item.");
             return;
         }
 
         setSaveStatus('saving');
-        
         try {
             const encryptedContent = await encrypt(contentToEncrypt, masterPassword);
-            
             const newItem: VaultItem = {
                 id: Date.now().toString(),
                 name: newItemName,
                 type: newItemType,
                 encryptedContent: encryptedContent,
-                website: websiteForSave
+                website: websiteForSave,
             };
             setVaultItems(prev => [...prev, newItem]);
+            setSaveStatus('saved');
             
-            // Reset form fields
+            // Reset form
+            setShowNewItemForm(false);
             setNewItemName('');
+            setNewItemType('secret');
             setNewItemContent('');
-            setNewItemNotes('');
             setNewItemWebsite('');
+            setNewItemNotes('');
             setNewItemUsername('');
             setNewItemPassword('');
-            setNewItemType('secret');
-            
-            setSaveStatus('saved');
-            setTimeout(() => {
-                setShowNewItemForm(false);
-                setSaveStatus('idle');
-            }, 2000);
 
-        } catch (e) {
-            alert("Failed to encrypt new item.");
-            setSaveStatus('idle');
-        }
-    };
-
-    const openDeleteConfirmation = (id: string) => {
-        const item = vaultItems.find(i => i.id === id);
-        if (item) {
-            setItemToDelete(item);
+        } catch (err) {
+            console.error("Failed to encrypt and save item:", err);
+            alert("Failed to save item. Please check the console for details.");
+        } finally {
+            setTimeout(() => setSaveStatus('idle'), 2000);
         }
     };
     
-    const handleConfirmDelete = () => {
+    const confirmDeleteItem = () => {
         if (itemToDelete) {
-            const idToDelete = itemToDelete.id;
-            setVaultItems(prevItems => prevItems.filter(item => item.id !== idToDelete));
+            setVaultItems(prev => prev.filter(item => item.id !== itemToDelete.id));
             setItemToDelete(null);
         }
     };
-    
-    const toggleVisibility = (id: string) => {
-        setVisibility(prev => ({ ...prev, [id]: !prev[id] }));
-    };
 
-    const handleCopy = (text: string, id: string) => {
-        navigator.clipboard.writeText(text);
-        setCopied(id);
+    const handleCopyContent = useCallback((content: string) => {
+        navigator.clipboard.writeText(content);
+        setCopied(content);
         setTimeout(() => setCopied(null), 2000);
-    };
+    }, []);
 
-    const { apiKeys, generalSecrets, logins } = useMemo(() => {
-        const apiKeysGrouped: Record<string, DecryptedVaultItem[]> = {};
-        const loginsGrouped: Record<string, DecryptedVaultItem[]> = {};
-        const generalSecrets: DecryptedVaultItem[] = [];
-
-        decryptedItems.forEach(item => {
-            if (item.type === 'apiKey' && item.website) {
-                const website = item.website.trim() || 'Uncategorized';
-                if (!apiKeysGrouped[website]) apiKeysGrouped[website] = [];
-                apiKeysGrouped[website].push(item);
-            } else if (item.type === 'login' && item.website) {
-                const website = item.website.trim() || 'Uncategorized';
-                if (!loginsGrouped[website]) loginsGrouped[website] = [];
-                loginsGrouped[website].push(item);
-            } else {
-                generalSecrets.push(item);
-            }
-        });
-        return { 
-            apiKeys: Object.entries(apiKeysGrouped).sort((a,b) => a[0].localeCompare(b[0])),
-            logins: Object.entries(loginsGrouped).sort((a,b) => a[0].localeCompare(b[0])),
-            generalSecrets 
-        };
-    }, [decryptedItems]);
-
-    const renderItemContent = (item: DecryptedVaultItem) => {
-        const isVisible = !!visibility[item.id];
-        if (!isVisible && item.type !== 'login') return <div className="mt-2 pl-7 text-gray-500 font-mono">••••••••••••••••</div>;
+    const toggleVisibility = useCallback((id: string) => {
+        setVisibility(prev => ({ ...prev, [id]: !prev[id] }));
+    }, []);
     
-        if (item.type === 'apiKey' && typeof item.decryptedContent === 'object' && item.decryptedContent) {
-            const content = item.decryptedContent as { key: string; notes?: string };
-            return (
-                <div className="mt-2 pl-7 space-y-2 font-mono text-sm">
-                    <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0 flex-1">
-                            <span className="text-gray-400">Key: </span>
-                            <span className="text-gray-200 break-all">{content.key}</span>
-                        </div>
-                        <button onClick={() => handleCopy(content.key, item.id + '-key')} className="text-gray-400 hover:text-white transition-colors flex-shrink-0">
-                            {copied === item.id + '-key' ? <span className="text-xs text-green-400">Copied!</span> : <CopyIcon className="w-4 h-4" />}
-                        </button>
-                    </div>
-                    {content.notes && (
-                         <div className="text-gray-200 whitespace-pre-wrap">
-                            <span className="text-gray-400">Notes: </span>
-                            <span>{content.notes}</span>
-                        </div>
-                    )}
-                </div>
-            );
-        } else if (item.type === 'login' && typeof item.decryptedContent === 'object' && item.decryptedContent) {
-            const content = item.decryptedContent as { username: string; password?: string };
-            return (
-                <div className="mt-2 pl-7 space-y-2 font-mono text-sm">
-                    <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0 flex-1">
-                            <span className="text-gray-400">Username: </span>
-                            <span className="text-gray-200 break-all">{content.username}</span>
-                        </div>
-                        <button onClick={() => handleCopy(content.username, item.id + '-user')} className="text-gray-400 hover:text-white transition-colors flex-shrink-0">
-                            {copied === item.id + '-user' ? <span className="text-xs text-green-400">Copied!</span> : <CopyIcon className="w-4 h-4" />}
-                        </button>
-                    </div>
-                    <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0 flex-1">
-                             <span className="text-gray-400">Password: </span>
-                             <span className="text-gray-200 break-all">
-                                {isVisible ? content.password : '••••••••••••••••'}
-                             </span>
-                        </div>
-                         <button onClick={() => handleCopy(content.password || '', item.id + '-pass')} className="text-gray-400 hover:text-white transition-colors flex-shrink-0">
-                            {copied === item.id + '-pass' ? <span className="text-xs text-green-400">Copied!</span> : <CopyIcon className="w-4 h-4" />}
-                        </button>
-                    </div>
-                </div>
-            );
-        } else if (typeof item.decryptedContent === 'string') {
-             return <pre className="text-gray-200 mt-2 bg-black/30 p-3 rounded-md font-mono whitespace-pre-wrap break-all">{item.decryptedContent}</pre>
-        }
+    const sortedItems = useMemo(() => {
+        return [...decryptedItems, ...failedItems].sort((a, b) => a.name.localeCompare(b.name));
+    }, [decryptedItems, failedItems]);
     
-        return null;
-    };
-    
-    const ensureUrlProtocol = (url: string) => {
-      if (!/^(?:f|ht)tps?:\/\//.test(url)) {
-          return `https://${url}`;
-      }
-      return url;
-    };
-
     if (!isVaultConfigured) {
         return <SetupVaultForm />;
     }
 
     if (!isUnlocked) {
         return (
-          <div className="max-w-md mx-auto text-center p-8 bg-gray-900/50 border border-white/10 rounded-lg">
-            <VaultIcon className="w-12 h-12 mx-auto text-cyan-400" />
-            <h2 className="text-2xl font-bold mt-4">Vault is Locked</h2>
-            <p className="text-gray-400 mt-2">Enter your master password to unlock.</p>
-            <form onSubmit={handleUnlock} className="mt-6 space-y-4">
-              <input
-                type="password"
-                name="password"
-                placeholder="Master Password"
-                className={commonInputStyle}
-                autoComplete="current-password"
-                required
-              />
-              {verificationError && <p className="text-red-400 text-sm">{verificationError}</p>}
-              <button type="submit" disabled={isVerifying} className="w-full bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-2 px-4 rounded-md transition-colors disabled:bg-gray-600">
-                {isVerifying ? 'Verifying...' : 'Unlock'}
-              </button>
-            </form>
-          </div>
+            <div className="max-w-md mx-auto text-center p-8 bg-gray-900/50 border border-white/10 rounded-lg">
+                <KeyIcon className="w-12 h-12 mx-auto text-cyan-400" />
+                <h2 className="text-2xl font-bold mt-4">Unlock Your Vault</h2>
+                <p className="text-gray-400 mt-2">Enter your master password to access your secrets.</p>
+                <form onSubmit={handleUnlock} className="mt-6 space-y-4">
+                    <input
+                        type="password"
+                        name="password"
+                        placeholder="Master Password"
+                        className={commonInputStyle}
+                        autoComplete="current-password"
+                        required
+                    />
+                    {verificationError && <p className="text-red-400 text-sm">{verificationError}</p>}
+                    <button type="submit" disabled={isVerifying} className="w-full bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-2 px-4 rounded-md transition-colors disabled:bg-gray-600">
+                        {isVerifying ? 'Unlocking...' : 'Unlock'}
+                    </button>
+                </form>
+            </div>
         );
     }
     
     return (
-        <div className="space-y-8">
-            <div className="flex justify-between items-center">
-                <h2 className="text-3xl font-bold text-white">Secure Vault</h2>
-                <div>
-                    <button onClick={() => setShowNewItemForm(!showNewItemForm)} className="mr-4 bg-fuchsia-500/80 hover:bg-fuchsia-500 text-white font-bold py-2 px-4 rounded-md transition-colors text-sm">
-                        {showNewItemForm ? 'Cancel' : '+ New Item'}
+        <div className="space-y-6">
+            <header className="pb-4 border-b border-white/10 flex justify-between items-center">
+                <div className="flex items-center gap-3">
+                    <VaultIcon className="w-8 h-8 text-cyan-400" />
+                    <div>
+                        <h1 className="text-3xl font-bold text-white">Vault</h1>
+                        <p className="text-gray-400 text-sm">Your encrypted secrets and API keys.</p>
+                    </div>
+                </div>
+                <div className="flex gap-2">
+                    <button onClick={() => setShowNewItemForm(true)} className="bg-fuchsia-500/80 hover:bg-fuchsia-500 text-white font-bold py-2 px-4 rounded-md transition-colors text-sm">
+                        + Add New Item
                     </button>
                     <button onClick={handleLock} className="bg-gray-600/50 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-md transition-colors text-sm">
                         Lock Vault
                     </button>
                 </div>
-            </div>
-
-            {decryptionError && (
-                 <div className="p-3 bg-yellow-900/30 border border-yellow-500/30 rounded-md text-yellow-300 text-sm">
-                    {decryptionError}
-                </div>
-            )}
+            </header>
 
             {showNewItemForm && (
-                <form onSubmit={handleAddItem} className="p-6 bg-gray-900/50 border border-white/10 rounded-lg space-y-4 animate-fade-in">
-                    <style>{`
-                        @keyframes fade-in {
-                            from { opacity: 0; transform: translateY(-10px); }
-                            to { opacity: 1; transform: translateY(0); }
+                 <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 flex items-center justify-center p-4">
+                    <div className="bg-gray-900 border border-white/10 rounded-lg shadow-2xl max-w-lg w-full">
+                        <form onSubmit={handleAddItem} className="p-6 space-y-4">
+                            <h2 className="text-xl font-bold text-white mb-4">Add New Vault Item</h2>
+                            <input type="text" value={newItemName} onChange={e => setNewItemName(e.target.value)} placeholder="Item Name" required className={commonInputStyle} />
+                            <select value={newItemType} onChange={e => setNewItemType(e.target.value as VaultItemType)} className={commonInputStyle}>
+                                <option value="secret">Secret</option>
+                                <option value="apiKey">API Key</option>
+                                <option value="login">Login</option>
+                            </select>
+                            
+                            {newItemType === 'login' && (
+                                <>
+                                    <input type="text" value={newItemWebsite} onChange={e => setNewItemWebsite(e.target.value)} placeholder="Website URL" required className={commonInputStyle} />
+                                    <input type="text" value={newItemUsername} onChange={e => setNewItemUsername(e.target.value)} placeholder="Username" required className={commonInputStyle} />
+                                    <input type="password" value={newItemPassword} onChange={e => setNewItemPassword(e.target.value)} placeholder="Password" required className={commonInputStyle} />
+                                </>
+                            )}
+                            {newItemType === 'apiKey' && (
+                                <>
+                                    <input type="text" value={newItemWebsite} onChange={e => setNewItemWebsite(e.target.value)} placeholder="Website URL (e.g., openai.com)" required className={commonInputStyle} />
+                                    <textarea value={newItemContent} onChange={e => setNewItemContent(e.target.value)} placeholder="API Key or Secret" required rows={3} className={commonInputStyle}></textarea>
+                                    <textarea value={newItemNotes} onChange={e => setNewItemNotes(e.target.value)} placeholder="Notes (optional)" rows={2} className={commonInputStyle}></textarea>
+                                </>
+                            )}
+                            {newItemType === 'secret' && (
+                                <>
+                                     <input type="text" value={newItemWebsite} onChange={e => setNewItemWebsite(e.target.value)} placeholder="Website (optional)" className={commonInputStyle} />
+                                    <textarea value={newItemContent} onChange={e => setNewItemContent(e.target.value)} placeholder="Secret Content" required rows={4} className={commonInputStyle}></textarea>
+                                </>
+                            )}
+
+                            <div className="flex justify-end gap-4 pt-4 border-t border-white/10">
+                                <button type="button" onClick={() => setShowNewItemForm(false)} className="px-6 py-2 rounded-md text-sm bg-gray-600/50 hover:bg-gray-600">Cancel</button>
+                                <button type="submit" disabled={saveStatus === 'saving'} className="px-6 py-2 rounded-md text-sm bg-fuchsia-600 hover:bg-fuchsia-700">Save</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {decryptionError && <p className="text-yellow-400 bg-yellow-900/30 p-3 rounded-md text-sm">{decryptionError}</p>}
+            
+            <div className="space-y-3">
+                {sortedItems.length === 0 ? (
+                    <div className="text-center py-20 bg-gray-900/50 border border-dashed border-white/10 rounded-lg">
+                        <VaultIcon className="w-12 h-12 mx-auto text-gray-600" />
+                        <h3 className="text-xl font-semibold text-white mt-4">Your Vault is Empty</h3>
+                        <p className="text-gray-400 mt-2">Click "+ Add New Item" to secure your first secret.</p>
+                    </div>
+                ) : sortedItems.map(item => {
+                    const isDecrypted = 'decryptedContent' in item;
+                    const decItem = isDecrypted ? (item as DecryptedVaultItem) : null;
+                    const isVisible = !!(decItem && visibility[decItem.id]);
+                    
+                    let displayContent = '••••••••••••••••••';
+                    if (isDecrypted && isVisible) {
+                         if (decItem.type === 'login' && typeof decItem.decryptedContent === 'object' && decItem.decryptedContent) {
+                            const { username, password } = decItem.decryptedContent as { username: string, password?: string };
+                            displayContent = `User: ${username}\nPass: ${password || 'N/A'}`;
+                        } else if (decItem.type === 'apiKey' && typeof decItem.decryptedContent === 'object' && decItem.decryptedContent) {
+                            const { key, notes } = decItem.decryptedContent as { key: string, notes?: string };
+                            displayContent = `Key: ${key}${notes ? `\nNotes: ${notes}` : ''}`;
+                        } else {
+                            displayContent = decItem.decryptedContent as string;
                         }
-                        .animate-fade-in { animation: fade-in 0.3s ease-out; }
-                        @keyframes pop-in {
-                            0% { transform: scale(0.9); opacity: 0; }
-                            50% { transform: scale(1.1); opacity: 1; }
-                            100% { transform: scale(1); opacity: 1; }
-                        }
-                        .animate-pop-in { 
-                            animation: pop-in 0.3s ease-out forwards; 
-                        }
-                    `}</style>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <input type="text" value={newItemName} onChange={e => setNewItemName(e.target.value)} placeholder="Name (e.g., 'Google Account')" required className={commonInputStyle} />
-                        <select value={newItemType} onChange={e => setNewItemType(e.target.value as VaultItemType)} className={commonInputStyle}>
-                            <option value="secret">General Secret</option>
-                            <option value="apiKey">API Key</option>
-                            <option value="login">Login</option>
-                        </select>
-                    </div>
+                    }
 
-                    {(newItemType === 'apiKey' || newItemType === 'login') && (
-                        <input type="text" value={newItemWebsite} onChange={e => setNewItemWebsite(e.target.value)} placeholder="Website / Service (e.g. 'google.com')" required className={commonInputStyle} />
-                    )}
-
-                    {newItemType === 'login' && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <input type="text" value={newItemUsername} onChange={e => setNewItemUsername(e.target.value)} placeholder="Username or Email" required className={commonInputStyle} />
-                            <input type="password" value={newItemPassword} onChange={e => setNewItemPassword(e.target.value)} placeholder="Password" required className={commonInputStyle} />
+                    return (
+                        <div key={item.id} className={`p-4 rounded-lg border ${isDecrypted ? 'bg-gray-900/50 border-white/10' : 'bg-red-900/20 border-red-500/30'}`}>
+                           <div className="flex justify-between items-start gap-4">
+                                <div className="flex items-start gap-3 min-w-0">
+                                    <div className="text-gray-500 pt-1">
+                                        {item.type === 'login' && <KeyIcon className="w-5 h-5"/>}
+                                        {item.type === 'apiKey' && <KeyIcon className="w-5 h-5 text-yellow-400"/>}
+                                        {item.type === 'secret' && <FileTextIcon className="w-5 h-5"/>}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="font-semibold text-white truncate">{item.name}</p>
+                                        {item.website && <a href={item.website} target="_blank" rel="noopener noreferrer" className="text-xs text-cyan-400 hover:underline truncate flex items-center gap-1"><GlobeIcon className="w-3 h-3"/>{item.website}</a>}
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2 flex-shrink-0">
+                                    {isDecrypted && (
+                                         <>
+                                            <button onClick={() => toggleVisibility(item.id)} className="p-1.5 rounded-full text-gray-400 hover:text-white hover:bg-gray-700">{isVisible ? <EyeOffIcon className="w-4 h-4" /> : <EyeIcon className="w-4 h-4" />}</button>
+                                            <button onClick={() => handleCopyContent(displayContent)} className="p-1.5 rounded-full text-gray-400 hover:text-white hover:bg-gray-700">{copied === displayContent ? <span className="text-xs">Copied!</span> : <CopyIcon className="w-4 h-4" />}</button>
+                                        </>
+                                    )}
+                                    <button onClick={() => setItemToDelete(item)} className="p-1.5 rounded-full text-gray-400 hover:text-red-400 hover:bg-red-900/50"><TrashIcon className="w-4 h-4"/></button>
+                                </div>
+                           </div>
+                           <div className="mt-2 pl-8">
+                               {isDecrypted ? (
+                                    <pre className="text-sm text-gray-300 whitespace-pre-wrap font-mono bg-gray-800/50 p-2 rounded-md">{displayContent}</pre>
+                               ) : (
+                                   <p className="text-xs text-red-300">Could not decrypt. Encrypted with a different password?</p>
+                               )}
+                           </div>
                         </div>
-                    )}
-
-                    {newItemType !== 'login' && (
-                        <textarea value={newItemContent} onChange={e => setNewItemContent(e.target.value)} placeholder={newItemType === 'apiKey' ? 'API Key Value' : 'Secret Content'} required rows={3} className={commonInputStyle} />
-                    )}
-
-                    {newItemType === 'apiKey' && (
-                        <textarea value={newItemNotes} onChange={e => setNewItemNotes(e.target.value)} placeholder="Notes (Optional)" rows={2} className={commonInputStyle} />
-                    )}
-                    <div className="flex items-center gap-4">
-                        <button type="submit" disabled={saveStatus === 'saving'} className="w-full bg-fuchsia-500 hover:bg-fuchsia-600 text-white font-bold py-2 px-4 rounded-md transition-colors disabled:bg-gray-600">
-                            {saveStatus === 'saving' ? 'Saving...' : 'Save Item'}
-                        </button>
-                        {saveStatus === 'saved' && (
-                            <span className="text-green-400 text-sm font-semibold whitespace-nowrap animate-pop-in">✓ Saved successfully!</span>
-                        )}
-                    </div>
-                </form>
-            )}
-
-            {decryptedItems.length === 0 && failedItems.length === 0 && !showNewItemForm && (
-                <div className="text-center py-16 text-gray-500">
-                    <p>Your vault is empty.</p>
-                    <p>Click "+ New Item" to add your first secret.</p>
-                </div>
-            )}
-
-            {logins.length > 0 && (
-                <div className="space-y-4">
-                    <h3 className="text-xl font-semibold text-white border-b border-white/10 pb-2">Logins</h3>
-                    {logins.map(([website, items]) => (
-                        <div key={website}>
-                            <a href={ensureUrlProtocol(website)} target="_blank" rel="noopener noreferrer" className="text-md font-bold text-cyan-400 mb-2 flex items-center gap-2 hover:underline">
-                                <GlobeIcon className="w-4 h-4" />
-                                {website}
-                            </a>
-                            <div className="space-y-2">
-                            {items.map(item => (
-                                <div key={item.id} className="bg-gray-800/50 p-4 rounded-lg">
-                                    <div className="flex justify-between items-start">
-                                        <div className="flex items-center gap-2">
-                                            <KeyIcon className="w-5 h-5 text-gray-400" />
-                                            <p className="font-semibold">{item.name}</p>
-                                        </div>
-                                        <div className="flex items-center gap-2 text-gray-500">
-                                            <button onClick={() => toggleVisibility(item.id)} className="hover:text-white">
-                                                {visibility[item.id] ? <EyeOffIcon className="w-4 h-4" /> : <EyeIcon className="w-4 h-4" />}
-                                            </button>
-                                            <button onClick={() => openDeleteConfirmation(item.id)} className="hover:text-red-500"><TrashIcon className="w-4 h-4" /></button>
-                                        </div>
-                                    </div>
-                                    {renderItemContent(item)}
-                                </div>
-                            ))}
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            )}
-
-            {apiKeys.length > 0 && (
-                <div className="space-y-4">
-                    <h3 className="text-xl font-semibold text-white border-b border-white/10 pb-2">API Keys</h3>
-                    {apiKeys.map(([website, items]) => (
-                        <div key={website}>
-                            <h4 className="text-md font-bold text-cyan-400 mb-2">{website}</h4>
-                            <div className="space-y-2">
-                            {items.map(item => (
-                                <div key={item.id} className="bg-gray-800/50 p-4 rounded-lg">
-                                    <div className="flex justify-between items-start">
-                                        <div className="flex items-center gap-2">
-                                            <KeyIcon className="w-5 h-5 text-gray-400" />
-                                            <p className="font-semibold">{item.name}</p>
-                                        </div>
-                                        <div className="flex items-center gap-2 text-gray-500">
-                                            <button onClick={() => toggleVisibility(item.id)} className="hover:text-white">
-                                                {visibility[item.id] ? <EyeOffIcon className="w-4 h-4" /> : <EyeIcon className="w-4 h-4" />}
-                                            </button>
-                                            <button onClick={() => openDeleteConfirmation(item.id)} className="hover:text-red-500"><TrashIcon className="w-4 h-4" /></button>
-                                        </div>
-                                    </div>
-                                    {renderItemContent(item)}
-                                </div>
-                            ))}
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            )}
-
-            {generalSecrets.length > 0 && (
-                <div className="space-y-4">
-                    <h3 className="text-xl font-semibold text-white border-b border-white/10 pb-2">General Secrets</h3>
-                    <div className="space-y-2">
-                        {generalSecrets.map(item => (
-                            <div key={item.id} className="bg-gray-800/50 p-4 rounded-lg">
-                                <div className="flex justify-between items-start">
-                                    <div className="flex items-center gap-2">
-                                        <FileTextIcon className="w-5 h-5 text-gray-400" />
-                                        <p className="font-semibold">{item.name}</p>
-                                    </div>
-                                    <div className="flex items-center gap-2 text-gray-500">
-                                        <button onClick={() => toggleVisibility(item.id)} className="hover:text-white">
-                                            {visibility[item.id] ? <EyeOffIcon className="w-4 h-4" /> : <EyeIcon className="w-4 h-4" />}
-                                        </button>
-                                        <button onClick={() => openDeleteConfirmation(item.id)} className="hover:text-red-500"><TrashIcon className="w-4 h-4" /></button>
-                                    </div>
-                                </div>
-                                {renderItemContent(item)}
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
-
-            {failedItems.length > 0 && (
-                <div className="space-y-4">
-                    <h3 className="text-xl font-semibold text-yellow-300 border-b border-yellow-400/20 pb-2">Undecrypted Items</h3>
-                    <div className="space-y-2">
-                        {failedItems.map(item => (
-                             <div key={item.id} className="bg-gray-800/50 p-4 rounded-lg opacity-60" title="Decryption failed. This might be a placeholder or was encrypted with a different password.">
-                                <div className="flex justify-between items-start">
-                                    <div className="flex items-center gap-2">
-                                        <VaultIcon className="w-5 h-5 text-gray-500" />
-                                        <p className="font-semibold text-gray-400">{item.name}</p>
-                                    </div>
-                                    <div className="flex items-center gap-2 text-gray-500">
-                                        <button onClick={() => openDeleteConfirmation(item.id)} className="hover:text-red-500"><TrashIcon className="w-4 h-4" /></button>
-                                    </div>
-                                </div>
-                                 <div className="mt-2 pl-7 text-gray-500 font-mono text-sm">
-                                    •••••••••••••••• (LOCKED)
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
+                    );
+                })}
+            </div>
 
             <ConfirmationDialog
                 isOpen={!!itemToDelete}
-                title="Delete Item"
+                title="Delete Vault Item"
                 message={`Are you sure you want to delete "${itemToDelete?.name}"? This action cannot be undone.`}
-                onConfirm={handleConfirmDelete}
+                onConfirm={confirmDeleteItem}
                 onCancel={() => setItemToDelete(null)}
                 confirmText="Delete"
             />
@@ -544,4 +378,5 @@ const VaultPage: React.FC<VaultPageProps> = ({ vaultItems, setVaultItems }) => {
     );
 };
 
+// FIX: Add default export to make the component available for import.
 export default VaultPage;
