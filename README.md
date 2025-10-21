@@ -70,6 +70,19 @@ The app logs the status of environment variables to the browser console on start
 - Shows environment mode
 - Shows warnings if keys are missing
 
+### Common Issues
+
+**"Gemini API key is not configured" error:**
+- Make sure you have created a `.env` file from `.env.example`
+- Verify your `.env` file contains `VITE_GEMINI_API_KEY=your_actual_key`
+- Restart the dev server after creating or modifying the `.env` file
+- Check the browser console for the environment status log
+
+**API calls failing:**
+- Verify your API key is valid in the provider's dashboard (Google AI Studio, OpenAI, etc.)
+- Check that the key has the necessary permissions
+- Ensure you haven't exceeded rate limits
+
 For detailed troubleshooting, see [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md).
 
 ## Deployment
