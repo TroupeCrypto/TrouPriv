@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { GoogleGenAI, Type } from "@google/genai";
 import { AIPersona, AIMemoryItem, AITrait, TraitCategory } from '../types';
 import { UserCircleIcon, SparklesIcon, TrashIcon, SpinnerIcon } from '../components/icons/Icons';
+import { getGeminiApiKeyOrThrow } from '../utils/env';
 
 interface EditableTraitProps {
     trait: AITrait;
@@ -98,7 +99,8 @@ const TraitCategorySection: React.FC<TraitCategorySectionProps> = ({ title, cate
         `;
         
         try {
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+            const apiKey = getGeminiApiKeyOrThrow();
+            const ai = new GoogleGenAI({ apiKey });
             const response = await ai.models.generateContent({
                 model: 'gemini-2.5-flash',
                 contents: prompt,

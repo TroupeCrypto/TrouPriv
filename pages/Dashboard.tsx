@@ -5,6 +5,7 @@ import { Asset, CryptoCurrency, PortfolioHistoryPoint, cryptoAssetTypes, AssetCa
 // FIX: Use relative paths for local modules
 import { ArrowUpIcon, ArrowDownIcon, CryptoIcon, SparklesIcon, SpinnerIcon, StarIcon } from '../components/icons/Icons';
 import { get, set } from '../utils/storage';
+import { getGeminiApiKeyOrThrow } from '../utils/env';
 
 type TimeRange = '24h' | '7d' | '1m' | 'all';
 
@@ -216,7 +217,8 @@ const Dashboard: React.FC<DashboardProps> = ({ assets, cryptoCurrencies, setCryp
         setIsGeneratingInsight(true);
         setAiInsight('');
         try {
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+            const apiKey = getGeminiApiKeyOrThrow();
+            const ai = new GoogleGenAI({ apiKey });
 
             const allocation: Record<string, number> = {};
             const categoryMap = new Map(assetCategories.map(c => [c.id, c.group]));

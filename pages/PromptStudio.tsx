@@ -8,6 +8,7 @@ import { Page } from '../types';
 import { CodeIcon, SpinnerIcon, TrashIcon, SparklesIcon } from '../components/icons/Icons';
 // FIX: Use relative paths for local modules
 import { get, set } from '../utils/storage';
+import { getGeminiApiKeyOrThrow } from '../utils/env';
 
 interface ResponseHistoryItem {
     id: number;
@@ -73,7 +74,8 @@ const PromptStudio: React.FC<{ setPage: (page: Page) => void }> = ({ setPage }) 
         setResponse('');
         setSelectedHistoryId(null);
         try {
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+            const apiKey = getGeminiApiKeyOrThrow();
+            const ai = new GoogleGenAI({ apiKey });
             const result = await ai.models.generateContent({
               model: 'gemini-2.5-flash',
               contents: { parts: [{ text: prompt }] }
@@ -132,7 +134,8 @@ const PromptStudio: React.FC<{ setPage: (page: Page) => void }> = ({ setPage }) 
         const generationPrompt = `Generate 4 diverse, creative, and useful prompts for the '${category}' section of a personal finance and asset management application called TrouPrive. The prompts should be actionable and interesting for a user. Return the prompts as a JSON array of strings. Example format: ["prompt 1", "prompt 2", "prompt 3", "prompt 4"]`;
 
         try {
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+            const apiKey = getGeminiApiKeyOrThrow();
+            const ai = new GoogleGenAI({ apiKey });
             const response = await ai.models.generateContent({
                 model: 'gemini-2.5-flash',
                 contents: { parts: [{ text: generationPrompt }] },

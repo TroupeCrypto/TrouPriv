@@ -4,6 +4,7 @@ import { ChatMessage, AIPersona, AIProtocol, VaultItem } from '../types';
 import { useVault } from '../contexts/VaultContext';
 import { KeyIcon, BibIcon, SpinnerIcon, UserCircleIcon, PaperclipIcon, XIcon, FileTextIcon } from '../components/icons/Icons';
 import { useMasterPassword } from '../contexts/MasterPasswordContext';
+import { getGeminiApiKeyOrThrow } from '../utils/env';
 
 interface ChatPageProps {
   chatHistory: ChatMessage[];
@@ -126,7 +127,8 @@ const ChatPage: React.FC<ChatPageProps> = ({ chatHistory, setChatHistory, aiPers
         if (fileToUpload) {
             return 'Gemini'; // Force Gemini for multimodal input for now
         }
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const apiKey = getGeminiApiKeyOrThrow();
+        const ai = new GoogleGenAI({ apiKey });
         const prompt = `Classify the following user prompt into one of these categories: "Conceptualization & Building", "Planning & Coding", "Styling & Design". Respond with only the category name. Prompt: "${userPrompt}"`;
         try {
             const response = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: { parts: [{ text: prompt }] } });
@@ -165,7 +167,8 @@ const ChatPage: React.FC<ChatPageProps> = ({ chatHistory, setChatHistory, aiPers
                     throw new Error("Gemini can currently only process image and text files in this chat.");
                 }
 
-                const geminiAi = new GoogleGenAI({ apiKey: process.env.API_KEY });
+                const apiKey = getGeminiApiKeyOrThrow();
+                const geminiAi = new GoogleGenAI({ apiKey });
                 
                 const contentsForGemini = [
                     ...recentHistory.map(m => ({
@@ -238,7 +241,8 @@ const ChatPage: React.FC<ChatPageProps> = ({ chatHistory, setChatHistory, aiPers
         setChatHistory(prev => [...prev, { role: 'model', content: '...', model: 'Gemini' }]);
         
         try {
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+            const apiKey = getGeminiApiKeyOrThrow();
+            const ai = new GoogleGenAI({ apiKey });
             const response = await ai.models.generateContent({
                 model: 'gemini-2.5-flash-image',
                 contents: { parts: [{ text: prompt }] },

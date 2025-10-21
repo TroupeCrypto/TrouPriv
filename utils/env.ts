@@ -169,3 +169,17 @@ export function initializeEnvValidation(): void {
     }
   }
 }
+
+/**
+ * Get a valid API key for Gemini or throw a helpful error
+ * This ensures the API key is configured before attempting to use it
+ */
+export function getGeminiApiKeyOrThrow(): string {
+  const apiKey = getApiKey('gemini') || (typeof process !== 'undefined' && process.env?.API_KEY);
+  
+  if (!apiKey) {
+    throw new Error('Gemini API key is not configured. Please add VITE_GEMINI_API_KEY to your .env file or set it in your hosting platform environment variables. See ENV_CONFIG.md for detailed instructions.');
+  }
+  
+  return apiKey;
+}

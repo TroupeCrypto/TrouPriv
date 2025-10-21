@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { GoogleGenAI, Type } from "@google/genai";
 import { Page } from '../types';
 import { SparklesIcon, SpinnerIcon } from '../components/icons/Icons';
+import { getGeminiApiKeyOrThrow } from '../utils/env';
 
 const DesignIcon: React.FC<{ className?: string }> = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L15.232 5.232z" /></svg>;
 
@@ -45,7 +46,8 @@ const DesignPage: React.FC<DesignPageProps> = ({ setPage }) => {
             4. 'tailwindHtml': A string containing the HTML and Tailwind CSS for the component. The HTML should be simple and semantic. The Tailwind classes should be modern and create a visually appealing component that fits a dark-themed, futuristic aesthetic.
         `;
         try {
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+            const apiKey = getGeminiApiKeyOrThrow();
+            const ai = new GoogleGenAI({ apiKey });
             const response = await ai.models.generateContent({
                 model: 'gemini-2.5-flash',
                 contents: { parts: [{ text: apiPrompt }] },

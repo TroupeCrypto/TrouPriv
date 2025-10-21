@@ -6,6 +6,7 @@ import { SparklesIcon, SpinnerIcon, BibIcon, KeyIcon, CopyIcon, OpenAIIcon, Anth
 import { useVault, DecryptedVaultItem } from '../contexts/VaultContext';
 import { useMasterPassword } from '../contexts/MasterPasswordContext';
 import * as storage from '../utils/storage';
+import { getGeminiApiKeyOrThrow, getApiKey } from '../utils/env';
 
 type ProviderID = 'gemini' | 'openai' | 'anthropic';
 
@@ -280,8 +281,11 @@ const AIStudio: React.FC<AIStudioProps> = ({ setPage, vaultItems }) => {
         try {
             let resultText = '';
             if (providerId === 'gemini') {
-                const apiKey = apiKeys.gemini || process.env.API_KEY;
-                if (!apiKey) throw new Error("Google Gemini API Key is not configured. Please add it to your vault or set the environment variable.");
+                // Try vault key first, then env var, then throw helpful error
+                const apiKey = apiKeys.gemini || getApiKey('gemini');
+                if (!apiKey) {
+                    throw new Error("Google Gemini API Key is not configured. Please add VITE_GEMINI_API_KEY to your .env file or add it to your vault.");
+                }
 
                 const ai = new GoogleGenAI({ apiKey });
                 const result = await ai.models.generateContent({ 

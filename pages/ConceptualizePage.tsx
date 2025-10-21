@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { GoogleGenAI, Type } from "@google/genai";
 import { Page } from '../types';
 import { SparklesIcon, SpinnerIcon } from '../components/icons/Icons';
+import { getGeminiApiKeyOrThrow } from '../utils/env';
 
 interface ConceptualizationResult {
   projectName: string;
@@ -45,7 +46,8 @@ const ConceptualizePage: React.FC<ConceptualizePageProps> = ({ setPage }) => {
         `;
 
         try {
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+            const apiKey = getGeminiApiKeyOrThrow();
+            const ai = new GoogleGenAI({ apiKey });
             const response = await ai.models.generateContent({
                 model: 'gemini-2.5-flash',
                 contents: { parts: [{ text: prompt }] },
