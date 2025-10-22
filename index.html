@@ -1,49 +1,572 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>TrouPrive - Real-Time Asset Database</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Troupe Cryptospace</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-okaidia.min.css" integrity="sha512-mIs9kKbaw6JutHwEKGSMVJysKM3hptJHZX10OQvMQAFsZIdoOPCpf/weoRirDMkcctInEokb86SMRZeyou+g7Q==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link href="https://fonts.googleapis.com/css2?family=Almendra+Display&family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
     <style>
-      body {
-        font-family: 'Space Grotesk', sans-serif;
-      }
-      /* Style for react-simple-code-editor */
-      .code-editor {
-        background: #1f2937; /* bg-gray-800 */
-        font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
-        font-size: 14px;
-        line-height: 1.5;
-        min-height: 100%;
-        caret-color: white;
-      }
-      .code-editor .prism-editor__textarea:focus {
-        outline: none;
-      }
+        :root {
+            --deep-space-blue: #0a043c;
+            --cosmic-glow-orange: #ff4800;
+            --electric-lightning-yellow: #f5df4d;
+            --hyper-cyan: #00d9ff;
+            --astral-purple: #711db0;
+            --nebula-pink: #c20078;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: var(--deep-space-blue);
+            font-family: 'Orbitron', sans-serif;
+            color: white;
+            cursor: crosshair;
+        }
+
+        #cosmic-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: -1;
+            width: 100%;
+            height: 100%;
+        }
+
+        .main-container {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+            padding: 2rem;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .portal-window {
+            padding: 3rem 4rem;
+            background: rgba(10, 4, 60, 0.4);
+            border: 2px solid var(--hyper-cyan);
+            border-radius: 20px;
+            box-shadow: 
+                0 0 15px var(--hyper-cyan),
+                0 0 30px var(--hyper-cyan),
+                inset 0 0 20px rgba(0, 217, 255, 0.5);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            text-align: center;
+            animation: float 8s ease-in-out infinite, border-pulse 4s infinite;
+        }
+
+        @keyframes float {
+            0% { transform: translatey(0px); }
+            50% { transform: translatey(-15px); }
+            100% { transform: translatey(0px); }
+        }
+
+        @keyframes border-pulse {
+            0% { border-color: var(--hyper-cyan); box-shadow: 0 0 15px var(--hyper-cyan), 0 0 30px var(--hyper-cyan), inset 0 0 20px rgba(0, 217, 255, 0.5); }
+            50% { border-color: var(--nebula-pink); box-shadow: 0 0 15px var(--nebula-pink), 0 0 30px var(--nebula-pink), inset 0 0 20px rgba(194, 0, 120, 0.5); }
+            100% { border-color: var(--hyper-cyan); box-shadow: 0 0 15px var(--hyper-cyan), 0 0 30px var(--hyper-cyan), inset 0 0 20px rgba(0, 217, 255, 0.5); }
+        }
+
+        .title {
+            font-family: 'Almendra Display', serif;
+            font-size: clamp(3rem, 10vw, 6rem);
+            font-weight: bold;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            background: linear-gradient(45deg, var(--cosmic-glow-orange), var(--electric-lightning-yellow), var(--hyper-cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            color: transparent;
+            animation: text-flow 10s ease-in-out infinite;
+            background-size: 200% 200%;
+            text-shadow:
+                0 0 5px var(--electric-lightning-yellow),
+                0 0 10px var(--electric-lightning-yellow),
+                0 0 20px var(--cosmic-glow-orange),
+                0 0 40px var(--cosmic-glow-orange);
+        }
+        
+        @keyframes text-flow {
+            0%{background-position:0% 50%}
+            50%{background-position:100% 50%}
+            100%{background-position:0% 50%}
+        }
+
+        .subtitle {
+            margin-top: 0.5rem;
+            font-size: clamp(1rem, 4vw, 1.5rem);
+            color: var(--hyper-cyan);
+            text-shadow: 0 0 5px var(--hyper-cyan);
+            animation: subtitle-flicker 5s infinite;
+        }
+
+        @keyframes subtitle-flicker {
+            0%, 18%, 22%, 25%, 53%, 57%, 100% {
+                text-shadow:
+                0 0 4px var(--hyper-cyan),
+                0 0 11px var(--hyper-cyan),
+                0 0 19px var(--hyper-cyan),
+                0 0 40px var(--astral-purple),
+                0 0 80px var(--astral-purple);
+            }
+            20%, 24%, 55% { text-shadow: none; }
+        }
+
+        .navigation {
+            margin-top: 2.5rem;
+            display: flex;
+            gap: 2rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .nav-link {
+            font-family: 'Orbitron', sans-serif;
+            text-decoration: none;
+            color: white;
+            padding: 0.8rem 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50px;
+            background: transparent;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        .nav-link::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: radial-gradient(circle, var(--electric-lightning-yellow) 0%, var(--cosmic-glow-orange) 100%);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: width 0.4s ease, height 0.4s ease;
+            z-index: -1;
+        }
+        
+        .nav-link:hover {
+            color: var(--deep-space-blue);
+            border-color: var(--electric-lightning-yellow);
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(245, 223, 77, 0.2);
+        }
+        
+        .nav-link:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+        
+        .geometric-sigil {
+            position: absolute;
+            top: 40px;
+            right: 40px;
+            width: 80px;
+            height: 80px;
+            opacity: 0.7;
+            animation: rotate-sigil 30s linear infinite, sigil-pulse 3s ease-in-out infinite;
+            filter: drop-shadow(0 0 10px var(--electric-lightning-yellow));
+        }
+
+        @keyframes rotate-sigil {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes sigil-pulse {
+            0% { opacity: 0.7; filter: drop-shadow(0 0 10px var(--electric-lightning-yellow));}
+            50% { opacity: 1; filter: drop-shadow(0 0 20px var(--electric-lightning-yellow));}
+            100% { opacity: 0.7; filter: drop-shadow(0 0 10px var(--electric-lightning-yellow));}
+        }
+        
+        /* --- Feature 2: Data-Stream Modal --- */
+        #modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(10, 4, 60, 0.7);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.5s ease, visibility 0.5s ease;
+        }
+
+        #modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-content {
+            background: rgba(0,0,0,0.5);
+            padding: 2rem 3rem;
+            border: 1px solid var(--astral-purple);
+            box-shadow: 0 0 20px var(--astral-purple);
+            border-radius: 10px;
+            max-width: 600px;
+            text-align: left;
+            position: relative;
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            font-size: 1.5rem;
+            color: var(--hyper-cyan);
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+        .close-modal:hover {
+            transform: rotate(90deg);
+        }
+
+        .modal-content h3 {
+            font-family: 'Almendra Display', serif;
+            font-size: 2.5rem;
+            color: var(--nebula-pink);
+            margin-bottom: 1rem;
+        }
+
+        .modal-content p {
+            line-height: 1.6;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .glitch-text {
+            position: relative;
+            color: var(--hyper-cyan);
+        }
+        
+        @keyframes glitch-anim {
+            0% { clip-path: inset(45% 0 50% 0); } 2.5% { clip-path: inset(55% 0 5% 0); } 5% { clip-path: inset(20% 0 55% 0); } 7.5% { clip-path: inset(80% 0 10% 0); } 10% { clip-path: inset(5% 0 80% 0); } 12.5% { clip-path: inset(60% 0 30% 0); } 15% { clip-path: inset(30% 0 60% 0); } 17.5% { clip-path: inset(70% 0 5% 0); } 20% { clip-path: inset(40% 0 45% 0); } 22.5% { clip-path: inset(90% 0 5% 0); } 25% { clip-path: inset(10% 0 70% 0); } 27.5% { clip-path: inset(65% 0 15% 0); } 30% { clip-path: inset(40% 0 50% 0); } 32.5% { clip-path: inset(95% 0 2% 0); } 35% { clip-path: inset(15% 0 80% 0); } 37.5% { clip-path: inset(55% 0 35% 0); } 40% { clip-path: inset(25% 0 70% 0); } 42.5% { clip-path: inset(80% 0 10% 0); } 45% { clip-path: inset(5% 0 90% 0); } 47.5% { clip-path: inset(70% 0 20% 0); } 50% { clip-path: inset(35% 0 55% 0); } 52.5% { clip-path: inset(85% 0 5% 0); } 55% { clip-path: inset(20% 0 75% 0); } 57.5% { clip-path: inset(75% 0 15% 0); } 60% { clip-path: inset(45% 0 45% 0); } 62.5% { clip-path: inset(90% 0 8% 0); } 65% { clip-path: inset(10% 0 85% 0); } 67.5% { clip-path: inset(60% 0 25% 0); } 70% { clip-path: inset(30% 0 65% 0); } 72.5% { clip-path: inset(80% 0 12% 0); } 75% { clip-path: inset(7% 0 90% 0); } 77.5% { clip-path: inset(75% 0 18% 0); } 80% { clip-path: inset(40% 0 52% 0); } 82.5% { clip-path: inset(92% 0 5% 0); } 85% { clip-path: inset(12% 0 78% 0); } 87.5% { clip-path: inset(68% 0 22% 0); } 90% { clip-path: inset(33% 0 62% 0); } 92.5% { clip-path: inset(82% 0 8% 0); } 95% { clip-path: inset(6% 0 88% 0); } 97.5% { clip-path: inset(78% 0 12% 0); } 100% { clip-path: inset(48% 0 48% 0); }
+        }
+
+        .glitch-text::before, .glitch-text::after {
+            content: attr(data-text);
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+        }
+
+        .glitch-text::before {
+            left: 2px;
+            text-shadow: -2px 0 var(--nebula-pink);
+            animation: glitch-anim 2s infinite linear alternate-reverse;
+        }
+
+        .glitch-text::after {
+            left: -2px;
+            text-shadow: -2px 0 var(--hyper-cyan), 2px 2px var(--cosmic-glow-orange);
+            animation: glitch-anim 2s infinite linear alternate;
+        }
+        
+        /* --- Feature 3: Sonic Immersion Toggle --- */
+        #audio-toggle {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            width: 50px;
+            height: 50px;
+            background: rgba(10, 4, 60, 0.5);
+            border: 1px solid var(--hyper-cyan);
+            border-radius: 50%;
+            cursor: pointer;
+            z-index: 100;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+        #audio-toggle:hover {
+            border-color: var(--electric-lightning-yellow);
+            box-shadow: 0 0 10px var(--electric-lightning-yellow);
+        }
+        #audio-toggle svg {
+            width: 24px;
+            height: 24px;
+            fill: var(--hyper-cyan);
+            transition: fill 0.3s ease;
+        }
+        #audio-toggle:hover svg {
+            fill: var(--electric-lightning-yellow);
+        }
     </style>
-  <script type="importmap">
-{
-  "imports": {
-    "react": "https://aistudiocdn.com/react@^19.2.0",
-    "react/": "https://aistudiocdn.com/react@^19.2.0/",
-    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
-    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.25.0",
-    "ethers": "https://esm.sh/ethers@6.13.1",
-    "react-simple-code-editor": "https://esm.sh/react-simple-code-editor@0.13.1",
-    "prismjs": "https://esm.sh/prismjs@1.29.0",
-    "prismjs/": "https://esm.sh/prismjs@1.29.0/"
-  }
-}
-</script>
 </head>
-  <body class="bg-black text-gray-200">
-    <div id="root"></div>
-    <script type="module" src="/index.tsx"></script>
-  </body>
+<body>
+
+    <canvas id="cosmic-canvas"></canvas>
+
+    <div class="main-container">
+
+        <svg class="geometric-sigil" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <linearGradient id="sigilGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" style="stop-color:var(--electric-lightning-yellow);stop-opacity:1" />
+                    <stop offset="100%" style="stop-color:var(--cosmic-glow-orange);stop-opacity:1" />
+                </linearGradient>
+            </defs>
+            <path stroke="url(#sigilGradient)" stroke-width="2" fill="none" d="M50 5 L95 28 L82 72 L18 72 L5 28 Z" />
+            <path stroke="url(#sigilGradient)" stroke-width="1.5" fill="none" d="M50 5 L50 95 M5 28 L95 28 M18 72 L82 72" />
+            <circle cx="50" cy="50" r="15" stroke="url(#sigilGradient)" stroke-width="1" fill="none" />
+            <circle cx="50" cy="50" r="8" stroke="url(#sigilGradient)" stroke-width="0.5" fill="none" />
+        </svg>
+
+        <div class="portal-window">
+            <h1 class="title">TROUPE</h1>
+            <h2 class="subtitle">CRYPTO.SPACE</h2>
+            <nav class="navigation">
+                <a href="#" class="nav-link">E X P L O R E</a>
+                <a href="#" class="nav-link" data-modal-trigger="manifest">M A N I F E S T</a>
+                <a href="#" class="nav-link">C O N N E C T</a>
+            </nav>
+        </div>
+
+    </div>
+
+    <!-- Feature 2: Data-Stream Modal HTML -->
+    <div id="modal-overlay">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h3 class="glitch-text" data-text="Our Manifest">Our Manifest</h3>
+            <p>We are a digital collective navigating the currents of the decentralized future. We believe in the sovereign individual, the power of cryptography to liberate, and the creation of art that transcends the physical medium. This is not just a project; it is a signal broadcast into the void, a call to fellow travelers in the cryptospace. Join us in building the new reality.</p>
+        </div>
+    </div>
+    
+    <!-- Feature 3: Sonic Immersion HTML -->
+    <div id="audio-toggle">
+        <!-- Speaker Icon -->
+        <svg id="icon-unmuted" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+        <!-- Muted Speaker Icon -->
+        <svg id="icon-muted" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="display: none;"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>
+    </div>
+    
+    <audio id="audio-hover" src="https://assets.codepen.io/217233/hoverSynth.wav" preload="auto"></audio>
+    <audio id="audio-click" src="https://assets.codepen.io/217233/clickSynth.wav" preload="auto"></audio>
+
+
+    <script>
+        const canvas = document.getElementById('cosmic-canvas');
+        const ctx = canvas.getContext('2d');
+        let width, height;
+        let particles = [];
+        const particleCount = 200;
+        const connectionDistance = 100;
+
+        // --- Feature 1: Gravity Well & Ripple ---
+        const mouse = { x: undefined, y: undefined, radius: 150 };
+        let ripples = [];
+
+        const colors = ['#ff4800', '#f5df4d', '#00d9ff', '#711db0', '#c20078'];
+
+        class Particle {
+            constructor() {
+                this.x = Math.random() * width;
+                this.y = Math.random() * height;
+                this.size = Math.random() * 2 + 1;
+                this.baseX = this.x; // Store original position for gravity release
+                this.baseY = this.y;
+                this.speedX = (Math.random() * 1 - 0.5);
+                this.speedY = (Math.random() * 1 - 0.5);
+                this.color = colors[Math.floor(Math.random() * colors.length)];
+                this.density = (Math.random() * 30) + 1; // How strongly it's affected by gravity
+            }
+
+            update(time) {
+                // Gravity Well Logic
+                let dx = mouse.x - this.x;
+                let dy = mouse.y - this.y;
+                let distance = Math.sqrt(dx * dx + dy * dy);
+                let forceDirectionX = dx / distance;
+                let forceDirectionY = dy / distance;
+                let maxDistance = mouse.radius;
+                // Force is stronger the closer the particle is
+                let force = (maxDistance - distance) / maxDistance;
+
+                if (distance < mouse.radius) {
+                    this.x += forceDirectionX * force * this.density * 0.1;
+                    this.y += forceDirectionY * force * this.density * 0.1;
+                } else {
+                    // Return to normal drift if outside the well
+                    const waveX = Math.sin(time * 0.0005 + this.y * 0.01) * 0.5;
+                    const waveY = Math.cos(time * 0.0005 + this.x * 0.01) * 0.5;
+
+                    this.x += this.speedX + waveX;
+                    this.y += this.speedY + waveY;
+                    
+                    if (this.x > width) this.x = 0;
+                    else if (this.x < 0) this.x = width;
+                    if (this.y > height) this.y = 0;
+                    else if (this.y < 0) this.y = height;
+                }
+            }
+
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+        
+        class Ripple {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.radius = 0;
+                this.maxRadius = 80;
+                this.speed = 2;
+                this.opacity = 1;
+            }
+            update() {
+                this.radius += this.speed;
+                if(this.radius > this.maxRadius) {
+                    this.opacity -= 0.05;
+                }
+            }
+            draw() {
+                ctx.strokeStyle = `rgba(0, 217, 255, ${this.opacity})`;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+        }
+
+        function init() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            particles = [];
+            for (let i = 0; i < particleCount; i++) {
+                particles.push(new Particle());
+            }
+        }
+
+        function connectParticles() {
+            for (let i = 0; i < particles.length; i++) {
+                for (let j = i + 1; j < particles.length; j++) {
+                    const dx = particles[i].x - particles[j].x;
+                    const dy = particles[i].y - particles[j].y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+
+                    if (distance < connectionDistance) {
+                        ctx.strokeStyle = `rgba(255, 72, 0, ${1 - distance / connectionDistance})`;
+                        ctx.lineWidth = 0.5;
+                        ctx.beginPath();
+                        ctx.moveTo(particles[i].x, particles[i].y);
+                        ctx.lineTo(particles[j].x, particles[j].y);
+                        ctx.stroke();
+                    }
+                }
+            }
+        }
+
+        function animate(time) {
+            ctx.fillStyle = 'rgba(10, 4, 60, 0.1)';
+            ctx.fillRect(0, 0, width, height);
+
+            connectParticles();
+
+            particles.forEach(particle => {
+                particle.update(time);
+                particle.draw();
+            });
+            
+            ripples.forEach((ripple, index) => {
+                ripple.update();
+                ripple.draw();
+                if(ripple.opacity <= 0) {
+                    ripples.splice(index, 1);
+                }
+            });
+
+            requestAnimationFrame(animate);
+        }
+
+        window.addEventListener('resize', init);
+        window.addEventListener('mousemove', (e) => {
+            mouse.x = e.x;
+            mouse.y = e.y;
+        });
+        window.addEventListener('click', (e) => {
+            ripples.push(new Ripple(e.x, e.y));
+            if(!isMuted) audioClick.play();
+        });
+        
+        init();
+        animate(0);
+        
+        // --- Feature 2 & 3: Modal & Audio Logic ---
+        const manifestTrigger = document.querySelector('[data-modal-trigger="manifest"]');
+        const modalOverlay = document.getElementById('modal-overlay');
+        const closeModal = document.querySelector('.close-modal');
+        
+        const audioToggle = document.getElementById('audio-toggle');
+        const audioHover = document.getElementById('audio-hover');
+        const audioClick = document.getElementById('audio-click');
+        const iconUnmuted = document.getElementById('icon-unmuted');
+        const iconMuted = document.getElementById('icon-muted');
+        const navLinks = document.querySelectorAll('.nav-link');
+
+        let isMuted = false;
+
+        manifestTrigger.addEventListener('click', (e) => {
+            e.preventDefault();
+            modalOverlay.classList.add('active');
+        });
+        
+        closeModal.addEventListener('click', () => {
+            modalOverlay.classList.remove('active');
+        });
+
+        modalOverlay.addEventListener('click', (e) => {
+            if (e.target === modalOverlay) {
+                modalOverlay.classList.remove('active');
+            }
+        });
+
+        audioToggle.addEventListener('click', () => {
+            isMuted = !isMuted;
+            iconUnmuted.style.display = isMuted ? 'none' : 'block';
+            iconMuted.style.display = isMuted ? 'block' : 'none';
+        });
+
+        navLinks.forEach(link => {
+            link.addEventListener('mouseenter', () => {
+                if (!isMuted) {
+                    audioHover.currentTime = 0;
+                    audioHover.play();
+                }
+            });
+        });
+
+    </script>
+</body>
 </html>
