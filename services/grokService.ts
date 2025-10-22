@@ -7,6 +7,7 @@
  */
 
 import { getApiKey } from '../utils/env';
+import type { DecryptedVaultItem } from '../contexts/VaultContext';
 
 export interface GrokMessage {
   role: 'system' | 'user' | 'assistant';
@@ -55,28 +56,28 @@ You have a friendly, professional tone and focus on practical, implementable sug
 When discussing design changes, be specific about what elements to change and why.`;
 
 /**
- * Get Grok API key from environment or throw error
+ * Get Grok API key from environment or vault, or throw error
  */
-export function getGrokApiKey(): string {
-  const apiKey = getApiKey('grok');
+export function getGrokApiKey(vaultItems?: DecryptedVaultItem[]): string {
+  const apiKey = getApiKey('grok', vaultItems);
   if (!apiKey) {
-    throw new Error('Grok API key not found. Please set VITE_GROK_AI in your environment variables or add GROK_AI to your vault.');
+    throw new Error('Grok API key not found. Please set VITE_GROK_AI in your environment variables or add a Grok API key to your vault (with "grok" or "xai" in the name).');
   }
   return apiKey;
 }
 
 /**
- * Check if Grok API key is available
+ * Check if Grok API key is available in environment or vault
  */
-export function hasGrokApiKey(): boolean {
-  return !!getApiKey('grok');
+export function hasGrokApiKey(vaultItems?: DecryptedVaultItem[]): boolean {
+  return !!getApiKey('grok', vaultItems);
 }
 
 /**
  * Send a chat request to Grok API
  */
-export async function sendGrokChat(request: GrokChatRequest): Promise<string> {
-  const apiKey = getGrokApiKey();
+export async function sendGrokChat(request: GrokChatRequest, vaultItems?: DecryptedVaultItem[]): Promise<string> {
+  const apiKey = getGrokApiKey(vaultItems);
   
   const requestBody = {
     model: request.model || 'grok-beta',
@@ -118,34 +119,34 @@ export async function sendGrokChat(request: GrokChatRequest): Promise<string> {
 /**
  * Send a simple message to Grok with the designer system prompt
  */
-export async function sendDesignerMessage(userMessage: string, conversationHistory: GrokMessage[] = []): Promise<string> {
+export async function sendDesignerMessage(userMessage: string, conversationHistory: GrokMessage[] = [], vaultItems?: DecryptedVaultItem[]): Promise<string> {
   const messages: GrokMessage[] = [
     { role: 'system', content: GROK_DESIGNER_PROMPT },
     ...conversationHistory,
     { role: 'user', content: userMessage },
   ];
 
-  return sendGrokChat({ messages });
+  return sendGrokChat({ messages }, vaultItems);
 }
 
 /**
  * Ask Grok to analyze a page or component description
  */
-export async function analyzeDesign(description: string, context?: string): Promise<string> {
+export async function analyzeDesign(description: string, context?: string, vaultItems?: DecryptedVaultItem[]): Promise<string> {
   const prompt = context 
     ? `Context: ${context}\n\nAnalyze this design: ${description}`
     : `Analyze this design: ${description}`;
   
-  return sendDesignerMessage(prompt);
+  return sendDesignerMessage(prompt, [], vaultItems);
 }
 
 /**
  * Ask Grok for design suggestions
  */
-export async function getSuggestions(currentDesign: string, goals?: string): Promise<string> {
+export async function getSuggestions(currentDesign: string, goals?: string, vaultItems?: DecryptedVaultItem[]): Promise<string> {
   const prompt = goals
     ? `Current design: ${currentDesign}\n\nDesign goals: ${goals}\n\nProvide specific suggestions for improvement.`
     : `Current design: ${currentDesign}\n\nProvide specific suggestions for improvement.`;
   
-  return sendDesignerMessage(prompt);
+  return sendDesignerMessage(prompt, [], vaultItems);
 }

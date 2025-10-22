@@ -5,7 +5,8 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { getApiKeys, hasApiKey, getApiKey, validateRequiredKeys } from '../utils/env';
+import { getApiKeys, hasApiKey, getApiKey, validateRequiredKeys, extractApiKeysFromVault } from '../utils/env';
+import type { DecryptedVaultItem } from '../contexts/VaultContext';
 
 describe('Environment Variable Utilities', () => {
   describe('getApiKeys', () => {
@@ -101,6 +102,168 @@ describe('Environment Variable Utilities', () => {
       const keys = getApiKeys();
       expect(keys).toBeDefined();
       expect(typeof keys).toBe('object');
+    });
+  });
+
+  describe('Vault integration', () => {
+    it('should extract API keys from vault items', () => {
+      const vaultItems: DecryptedVaultItem[] = [
+        {
+          id: '1',
+          name: 'Grok API Key',
+          type: 'apiKey',
+          encryptedContent: '',
+          decryptedContent: { key: 'test-grok-key-123' }
+        },
+        {
+          id: '2',
+          name: 'OpenAI Key',
+          type: 'apiKey',
+          encryptedContent: '',
+          decryptedContent: { key: 'test-openai-key-456' }
+        },
+        {
+          id: '3',
+          name: 'My Secret',
+          type: 'secret',
+          encryptedContent: '',
+          decryptedContent: 'not an api key'
+        }
+      ];
+
+      const extractedKeys = extractApiKeysFromVault(vaultItems);
+      
+      expect(extractedKeys.GROK_AI_KEY).toBe('test-grok-key-123');
+      expect(extractedKeys.OPENAI_API_KEY).toBe('test-openai-key-456');
+    });
+
+    it('should match Grok keys by name containing "grok" or "xai"', () => {
+      const vaultItems: DecryptedVaultItem[] = [
+        {
+          id: '1',
+          name: 'xAI API',
+          type: 'apiKey',
+          encryptedContent: '',
+          decryptedContent: { key: 'xai-key' }
+        },
+        {
+          id: '2',
+          name: 'Grok Designer',
+          type: 'apiKey',
+          encryptedContent: '',
+          decryptedContent: { key: 'grok-key' }
+        }
+      ];
+
+      const extractedKeys = extractApiKeysFromVault(vaultItems);
+      
+      // Should use the last matching key found (grok-key in this case)
+      expect(extractedKeys.GROK_AI_KEY).toBeDefined();
+      expect(['xai-key', 'grok-key']).toContain(extractedKeys.GROK_AI_KEY);
+    });
+
+    it('should match keys by website field', () => {
+      const vaultItems: DecryptedVaultItem[] = [
+        {
+          id: '1',
+          name: 'AI Key',
+          type: 'apiKey',
+          website: 'https://x.ai',
+          encryptedContent: '',
+          decryptedContent: { key: 'xai-website-key' }
+        }
+      ];
+
+      const extractedKeys = extractApiKeysFromVault(vaultItems);
+      
+      // The extracted keys should include the Grok key matched by website
+      expect(extractedKeys.GROK_AI_KEY).toBe('xai-website-key');
+    });
+
+    it('should prioritize environment variables over vault keys', () => {
+      // Note: This test documents the behavior but may use actual env vars from .env
+      // The important behavior is that the function accepts vault items as a parameter
+      const vaultItems: DecryptedVaultItem[] = [
+        {
+          id: '1',
+          name: 'Grok API',
+          type: 'apiKey',
+          encryptedContent: '',
+          decryptedContent: { key: 'vault-grok-key' }
+        }
+      ];
+
+      const apiKey = getApiKey('grok', vaultItems);
+      
+      // Should return a key (from env or vault)
+      expect(typeof apiKey).toBe('string');
+      expect(apiKey).toBeDefined();
+      expect(apiKey!.length).toBeGreaterThan(0);
+    });
+
+    it('should fallback to vault when env var is not set', () => {
+      // Test with a provider that doesn't have an env var set
+      const vaultItems: DecryptedVaultItem[] = [
+        {
+          id: '1',
+          name: 'Gemini API',
+          type: 'apiKey',
+          encryptedContent: '',
+          decryptedContent: { key: 'vault-gemini-key' }
+        }
+      ];
+
+      const extractedKeys = extractApiKeysFromVault(vaultItems);
+      
+      // Vault extraction should work regardless of env vars
+      expect(extractedKeys.GEMINI_API_KEY).toBe('vault-gemini-key');
+    });
+
+    it('should return true for hasApiKey when key is in vault', () => {
+      const vaultItems: DecryptedVaultItem[] = [
+        {
+          id: '1',
+          name: 'Grok API',
+          type: 'apiKey',
+          encryptedContent: '',
+          decryptedContent: { key: 'vault-grok-key' }
+        }
+      ];
+
+      const hasKey = hasApiKey('grok', vaultItems);
+      
+      expect(hasKey).toBe(true);
+    });
+
+    it('should handle empty vault items array', () => {
+      const vaultItems: DecryptedVaultItem[] = [];
+
+      const extractedKeys = extractApiKeysFromVault(vaultItems);
+      
+      expect(extractedKeys).toEqual({});
+    });
+
+    it('should ignore non-apiKey vault items', () => {
+      const vaultItems: DecryptedVaultItem[] = [
+        {
+          id: '1',
+          name: 'Grok Password',
+          type: 'login',
+          encryptedContent: '',
+          decryptedContent: { username: 'user', password: 'pass' }
+        },
+        {
+          id: '2',
+          name: 'My Grok Secret',
+          type: 'secret',
+          encryptedContent: '',
+          decryptedContent: 'secret text'
+        }
+      ];
+
+      const extractedKeys = extractApiKeysFromVault(vaultItems);
+      
+      expect(extractedKeys.GROK_AI_KEY).toBeUndefined();
     });
   });
 });

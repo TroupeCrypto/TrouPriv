@@ -5,6 +5,8 @@
  * It ensures proper fallback handling and provides debugging information in development.
  */
 
+import type { DecryptedVaultItem } from '../contexts/VaultContext';
+
 interface EnvConfig {
   GEMINI_API_KEY: string | undefined;
   OPENAI_API_KEY: string | undefined;
@@ -33,6 +35,41 @@ function getEnvVar(key: string): string | undefined {
 }
 
 /**
+ * Extract API keys from decrypted vault items
+ * Looks for vault items with type 'apiKey' and matches them by name/website
+ */
+export function extractApiKeysFromVault(vaultItems: DecryptedVaultItem[]): Partial<EnvConfig> {
+  const keys: Partial<EnvConfig> = {};
+  
+  vaultItems.forEach(item => {
+    if (item.type === 'apiKey' && typeof item.decryptedContent === 'object' && item.decryptedContent && 'key' in item.decryptedContent) {
+      const keyContent = (item.decryptedContent as { key: string }).key;
+      const name = item.name.toLowerCase();
+      const website = item.website?.toLowerCase() || '';
+      
+      // Match Gemini API keys
+      if (name.includes('gemini') || website.includes('gemini') || name.includes('google')) {
+        keys.GEMINI_API_KEY = keyContent;
+      }
+      // Match OpenAI API keys
+      if (name.includes('openai') || website.includes('openai')) {
+        keys.OPENAI_API_KEY = keyContent;
+      }
+      // Match Anthropic API keys
+      if (name.includes('anthropic') || website.includes('anthropic') || name.includes('claude')) {
+        keys.ANTHROPIC_API_KEY = keyContent;
+      }
+      // Match Grok API keys
+      if (name.includes('grok') || website.includes('grok') || name.includes('xai') || name.includes('x.ai') || website.includes('xai') || website.includes('x.ai')) {
+        keys.GROK_AI_KEY = keyContent;
+      }
+    }
+  });
+  
+  return keys;
+}
+
+/**
  * Get all API keys from environment variables
  */
 export function getApiKeys(): EnvConfig {
@@ -45,30 +82,34 @@ export function getApiKeys(): EnvConfig {
 }
 
 /**
- * Check if an API key is configured
+ * Check if an API key is configured in environment variables or vault
  */
-export function hasApiKey(provider: 'gemini' | 'openai' | 'anthropic' | 'grok'): boolean {
+export function hasApiKey(provider: 'gemini' | 'openai' | 'anthropic' | 'grok', vaultItems?: DecryptedVaultItem[]): boolean {
   const keys = getApiKeys();
+  const vaultKeys = vaultItems ? extractApiKeysFromVault(vaultItems) : {};
+  
   const keyMap = {
-    gemini: keys.GEMINI_API_KEY,
-    openai: keys.OPENAI_API_KEY,
-    anthropic: keys.ANTHROPIC_API_KEY,
-    grok: keys.GROK_AI_KEY,
+    gemini: keys.GEMINI_API_KEY || vaultKeys.GEMINI_API_KEY,
+    openai: keys.OPENAI_API_KEY || vaultKeys.OPENAI_API_KEY,
+    anthropic: keys.ANTHROPIC_API_KEY || vaultKeys.ANTHROPIC_API_KEY,
+    grok: keys.GROK_AI_KEY || vaultKeys.GROK_AI_KEY,
   };
   
   return !!keyMap[provider];
 }
 
 /**
- * Get API key for a specific provider
+ * Get API key for a specific provider from environment variables or vault
  */
-export function getApiKey(provider: 'gemini' | 'openai' | 'anthropic' | 'grok'): string | undefined {
+export function getApiKey(provider: 'gemini' | 'openai' | 'anthropic' | 'grok', vaultItems?: DecryptedVaultItem[]): string | undefined {
   const keys = getApiKeys();
+  const vaultKeys = vaultItems ? extractApiKeysFromVault(vaultItems) : {};
+  
   const keyMap = {
-    gemini: keys.GEMINI_API_KEY,
-    openai: keys.OPENAI_API_KEY,
-    anthropic: keys.ANTHROPIC_API_KEY,
-    grok: keys.GROK_AI_KEY,
+    gemini: keys.GEMINI_API_KEY || vaultKeys.GEMINI_API_KEY,
+    openai: keys.OPENAI_API_KEY || vaultKeys.OPENAI_API_KEY,
+    anthropic: keys.ANTHROPIC_API_KEY || vaultKeys.ANTHROPIC_API_KEY,
+    grok: keys.GROK_AI_KEY || vaultKeys.GROK_AI_KEY,
   };
   
   return keyMap[provider];
