@@ -503,7 +503,3 @@ const ChatPage: React.FC<ChatPageProps> = ({ chatHistory, setChatHistory, aiPers
 };
 
 export default ChatPage;
-
-// Auto-scroll to bottom when new messages arrive
-   useEffect(() => {
-     
