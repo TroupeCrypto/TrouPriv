@@ -1,0 +1,36 @@
+import React, { useState } from 'react';
+import { Page } from './types';
+import Dashboard from './pages/Dashboard';
+import Header from './components/Header';
+import { psychedelicBackgrounds } from './data/backgrounds';
+
+const App: React.FC = () => {
+  const [page, setPage] = useState<Page>(Page.Dashboard);
+  const [backgroundIndex] = useState(0);
+
+  const currentBackground = psychedelicBackgrounds[backgroundIndex];
+
+  return (
+    <div
+      className="min-h-screen bg-cover bg-center bg-fixed transition-all duration-1000"
+      style={{ backgroundImage: currentBackground }}
+    >
+      <div className="min-h-screen bg-black/80 backdrop-blur-sm">
+        <div className="container mx-auto px-4 py-4 sm:px-6 lg:px-8">
+          <Header currentPage={page} setPage={setPage} saveStatus="saved" />
+          <main className="mt-8">
+            <Dashboard
+              assets={[]}
+              cryptoCurrencies={[]}
+              setCryptoCurrencies={() => {}}
+              portfolioHistory={[]}
+              assetCategories={[]}
+            />
+          </main>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default App;
