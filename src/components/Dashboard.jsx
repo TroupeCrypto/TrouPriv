@@ -1,5 +1,5 @@
 import React from 'react';
-import MetricCard from './MetricCard';
+import MetricCard from './MetricCard.jsx';
 
 function Dashboard() {
   const metrics = [
