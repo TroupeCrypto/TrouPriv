@@ -40,7 +40,7 @@ router.post(
       );
     } catch (err: any) {
       console.error('Webhook signature verification failed:', err.message);
-      res.status(400).send(`Webhook Error: ${err.message}`);
+      res.status(400).send('Webhook signature verification failed');
       return;
     }
 
@@ -62,7 +62,7 @@ router.post(
       res.json({ received: true });
     } catch (err: any) {
       console.error('Error processing webhook event:', err);
-      res.status(500).send(`Error processing event: ${err.message}`);
+      res.status(500).send('Error processing webhook event');
     }
   }
 );

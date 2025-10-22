@@ -10,6 +10,7 @@ TypeScript Express server for Stripe Payment Element with dynamic cart pricing.
 - **Idempotency**: Prevent duplicate PaymentIntents via orderId
 - **Type-safe**: Full TypeScript implementation
 - **Security**: CORS configured, environment-based secrets
+- **Stripe API Version**: 2023-10-16
 
 ## Setup
 
