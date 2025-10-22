@@ -30,8 +30,19 @@ app = FastAPI(
 )
 
 # Initialize agent components
-agent_core = AgentCore(api_key=OPENAI_API_KEY)
+# Note: AgentCore is initialized lazily to avoid import-time errors
+agent_core = None
 tool_executor = ToolExecutor(workspace_path=WORKSPACE_PATH)
+
+
+def get_agent_core():
+    """Lazy initialization of AgentCore"""
+    global agent_core
+    if agent_core is None:
+        if not OPENAI_API_KEY or OPENAI_API_KEY == "your_key_here":
+            raise ValueError("OPENAI_API_KEY is not configured. Please set it in .env file.")
+        agent_core = AgentCore(api_key=OPENAI_API_KEY)
+    return agent_core
 
 
 class TaskRequest(BaseModel):
@@ -92,6 +103,12 @@ async def execute_task(request: TaskRequest):
     if not goal:
         raise HTTPException(status_code=400, detail="Goal cannot be empty")
     
+    # Initialize agent core (lazy initialization)
+    try:
+        core = get_agent_core()
+    except ValueError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
     print("\n" + "="*70)
     print("🚀 STARTING BiB! LITE AGENT")
     print("="*70)
@@ -113,7 +130,7 @@ async def execute_task(request: TaskRequest):
         # STEP 1: THINK
         # ====================
         print("💭 THINKING: Determining next action...")
-        action = agent_core.determine_next_action(goal, history)
+        action = core.determine_next_action(goal, history)
         
         # Check for LLM errors
         if action.get('tool') == 'error':
