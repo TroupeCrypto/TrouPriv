@@ -6,6 +6,15 @@ import { Asset, CryptoCurrency, PortfolioHistoryPoint, cryptoAssetTypes, AssetCa
 import { ArrowUpIcon, ArrowDownIcon, CryptoIcon, SparklesIcon, SpinnerIcon, StarIcon } from '../components/icons/Icons';
 import { get, set } from '../utils/storage';
 import { getGeminiApiKeyOrThrow } from '../utils/env';
+import {
+    PortfolioMetricsCards,
+    AssetAllocationChart,
+    PerformanceTrendChart,
+    TopPerformersChart,
+    CryptoMarketHeatmap,
+    AssetDistribution,
+    RiskAnalysis,
+} from '../components/dashboard';
 
 type TimeRange = '24h' | '7d' | '1m' | 'all';
 
@@ -107,80 +116,6 @@ const TimeRangeSelector: React.FC<{
     );
 };
 
-const PortfolioChart: React.FC<{ history: PortfolioHistoryPoint[], timeRange: TimeRange }> = ({ history, timeRange }) => {
-    const filteredHistory = useMemo(() => {
-        if (!history || history.length === 0) return [];
-        const now = Date.now();
-        const timeLimit = {
-            '24h': now - 24 * 60 * 60 * 1000,
-            '7d': now - 7 * 24 * 60 * 60 * 1000,
-            '1m': now - 30 * 24 * 60 * 60 * 1000,
-            'all': 0
-        }[timeRange];
-        return history.filter(p => p.timestamp >= timeLimit);
-    }, [history, timeRange]);
-
-    if (filteredHistory.length < 2) {
-        return <div className="h-full flex items-center justify-center text-gray-500">Not enough data to display chart.</div>;
-    }
-    
-    const lastValue = filteredHistory[filteredHistory.length - 1]?.value || 0;
-    const firstValue = filteredHistory[0]?.value || 0;
-    const change = lastValue - firstValue;
-    const changePercent = firstValue === 0 ? 0 : (change / firstValue) * 100;
-    const isPositive = change >= 0;
-
-    const width = 500;
-    const height = 192; // h-48
-    const padding = 5;
-
-    const minTimestamp = filteredHistory[0].timestamp;
-    const maxTimestamp = filteredHistory[filteredHistory.length - 1].timestamp;
-    const timestampRange = maxTimestamp - minTimestamp === 0 ? 1 : maxTimestamp - minTimestamp;
-
-    const values = filteredHistory.map(p => p.value);
-    const minValue = Math.min(...values);
-    const maxValue = Math.max(...values);
-    const valueRange = maxValue - minValue === 0 ? 1 : maxValue - minValue;
-
-    const points = filteredHistory
-        .map(p => {
-            const x = ((p.timestamp - minTimestamp) / timestampRange) * (width - padding * 2) + padding;
-            const y = height - padding - ((p.value - minValue) / valueRange) * (height - padding * 2);
-            return `${x.toFixed(2)},${y.toFixed(2)}`;
-        })
-        .join(' ');
-
-    return (
-        <div className="h-full">
-            <div className="flex items-baseline gap-4 mb-2">
-                <p className="text-3xl font-bold text-white font-mono">${lastValue.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
-                <div className={`flex items-center text-lg font-semibold ${isPositive ? 'text-green-400' : 'text-red-400'}`}>
-                    {isPositive ? <ArrowUpIcon className="w-5 h-5"/> : <ArrowDownIcon className="w-5 h-5"/>}
-                    <span>{isPositive ? '+' : ''}{change.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} ({changePercent.toFixed(2)}%)</span>
-                </div>
-            </div>
-            <div className="h-48 bg-gray-800/50 rounded-md flex items-center justify-center">
-                <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full">
-                    <defs>
-                        <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor={isPositive ? '#4ade80' : '#f87171'} stopOpacity="0.3"/>
-                        <stop offset="100%" stopColor={isPositive ? '#4ade80' : '#f87171'} stopOpacity="0"/>
-                        </linearGradient>
-                    </defs>
-                    <path d={`M ${points.split(' ')[0]} L ${points} L ${width-padding},${height-padding} L ${padding},${height-padding} Z`} fill="url(#chartGradient)" />
-                    <polyline
-                        fill="none"
-                        stroke={isPositive ? '#4ade80' : '#f87171'}
-                        strokeWidth="2"
-                        points={points}
-                    />
-                </svg>
-            </div>
-        </div>
-    );
-};
-
 interface DashboardProps {
     assets: Asset[];
     cryptoCurrencies: CryptoCurrency[];
@@ -194,15 +129,99 @@ const Dashboard: React.FC<DashboardProps> = ({ assets, cryptoCurrencies, setCryp
     const [aiInsight, setAiInsight] = useState<string>(() => get('dashboard_ai_insight', ''));
     const [isGeneratingInsight, setIsGeneratingInsight] = useState(false);
 
-    const totalPortfolioValue = useMemo(() => {
-        return assets.reduce((acc, asset) => {
-            if (cryptoAssetTypes.includes(asset.categoryId) && asset.cryptoId && asset.quantity) {
+    // Calculate portfolio metrics
+    const portfolioMetrics = useMemo(() => {
+        const categoryMap = new Map(assetCategories.map(c => [c.id, c.group]));
+        
+        let totalValue = 0;
+        let cryptoValue = 0;
+        const assetChanges: number[] = [];
+
+        assets.forEach(asset => {
+            const isCrypto = cryptoAssetTypes.includes(asset.categoryId);
+            let assetValue = asset.value;
+            
+            if (isCrypto && asset.cryptoId && asset.quantity) {
                 const crypto = cryptoCurrencies.find(c => c.id === asset.cryptoId);
-                return acc + (crypto ? crypto.price * asset.quantity : 0);
+                if (crypto) {
+                    assetValue = crypto.price * asset.quantity;
+                    assetChanges.push(crypto.change24h);
+                    cryptoValue += assetValue;
+                }
             }
-            return acc + asset.value;
-        }, 0);
+            
+            totalValue += assetValue;
+        });
+
+        // Calculate portfolio 24h change
+        const lastPoint = portfolioHistory[portfolioHistory.length - 1];
+        const yesterdayPoint = portfolioHistory[portfolioHistory.length - 2];
+        const change24h = (lastPoint && yesterdayPoint && yesterdayPoint.value > 0)
+            ? ((lastPoint.value - yesterdayPoint.value) / yesterdayPoint.value) * 100
+            : 0;
+
+        const topAssetChange = assetChanges.length > 0 ? Math.max(...assetChanges) : 0;
+        const avgAssetValue = assets.length > 0 ? totalValue / assets.length : 0;
+        const cryptoAllocation = totalValue > 0 ? (cryptoValue / totalValue) * 100 : 0;
+
+        return {
+            totalValue,
+            change24h,
+            assetCount: assets.length,
+            topAssetChange,
+            avgAssetValue,
+            cryptoAllocation,
+        };
+    }, [assets, cryptoCurrencies, portfolioHistory, assetCategories]);
+
+    // Calculate asset allocation data
+    const allocationData = useMemo(() => {
+        const categoryMap = new Map(assetCategories.map(c => [c.id, c.group]));
+        const groupValues: Record<string, number> = {};
+        let total = 0;
+
+        assets.forEach(asset => {
+            const group = categoryMap.get(asset.categoryId) || 'Other';
+            const value = cryptoAssetTypes.includes(asset.categoryId) && asset.cryptoId && asset.quantity
+                ? (cryptoCurrencies.find(c => c.id === asset.cryptoId)?.price || 0) * asset.quantity
+                : asset.value;
+            
+            groupValues[group] = (groupValues[group] || 0) + value;
+            total += value;
+        });
+
+        return Object.entries(groupValues).map(([name, value]) => ({
+            name,
+            value,
+            percentage: total > 0 ? (value / total) * 100 : 0,
+        }));
+    }, [assets, cryptoCurrencies, assetCategories]);
+
+    // Calculate top performers data
+    const topPerformersData = useMemo(() => {
+        const performers: { name: string; change: number; value: number }[] = [];
+        
+        cryptoCurrencies.forEach(crypto => {
+            const asset = assets.find(a => a.cryptoId === crypto.id);
+            const value = asset && asset.quantity ? crypto.price * asset.quantity : crypto.price;
+            performers.push({ name: crypto.symbol, change: crypto.change24h, value });
+        });
+
+        return performers.sort((a, b) => Math.abs(b.change) - Math.abs(a.change)).slice(0, 8);
     }, [assets, cryptoCurrencies]);
+
+    // Filter portfolio history by time range
+    const filteredHistory = useMemo(() => {
+        if (!portfolioHistory || portfolioHistory.length === 0) return [];
+        const now = Date.now();
+        const timeLimit = {
+            '24h': now - 24 * 60 * 60 * 1000,
+            '7d': now - 7 * 24 * 60 * 60 * 1000,
+            '1m': now - 30 * 24 * 60 * 60 * 1000,
+            'all': 0
+        }[timeRange];
+        return portfolioHistory.filter(p => p.timestamp >= timeLimit);
+    }, [portfolioHistory, timeRange]);
 
     const favoriteCryptos = useMemo(() => cryptoCurrencies.filter(c => c.isFavorite), [cryptoCurrencies]);
     const topMovers = useMemo(() => [...cryptoCurrencies].sort((a,b) => Math.abs(b.change24h) - Math.abs(a.change24h)).slice(0, 5), [cryptoCurrencies]);
@@ -235,9 +254,9 @@ const Dashboard: React.FC<DashboardProps> = ({ assets, cryptoCurrencies, setCryp
                 allocation[group] += assetValue;
             });
 
-            const allocationString = totalPortfolioValue > 0 
+            const allocationString = portfolioMetrics.totalValue > 0 
                 ? Object.entries(allocation)
-                    .map(([group, value]) => `${group} (${((value / totalPortfolioValue) * 100).toFixed(1)}%)`)
+                    .map(([group, value]) => `${group} (${((value / portfolioMetrics.totalValue) * 100).toFixed(1)}%)`)
                     .join(', ')
                 : 'No assets to analyze.';
 
@@ -247,7 +266,7 @@ const Dashboard: React.FC<DashboardProps> = ({ assets, cryptoCurrencies, setCryp
 
             const prompt = `
                 Analyze the following portfolio snapshot. Provide a brief, insightful summary (3-4 sentences).
-                - Total Portfolio Value: $${totalPortfolioValue.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                - Total Portfolio Value: $${portfolioMetrics.totalValue.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                 - Asset Allocation: ${allocationString}
                 - Top Crypto Movers (24h): ${volatileAssetsString}
                 
@@ -272,7 +291,7 @@ const Dashboard: React.FC<DashboardProps> = ({ assets, cryptoCurrencies, setCryp
         } finally {
             setIsGeneratingInsight(false);
         }
-    }, [totalPortfolioValue, topMovers, assets, assetCategories, cryptoCurrencies]);
+    }, [portfolioMetrics.totalValue, topMovers, assets, assetCategories, cryptoCurrencies]);
     
     useEffect(() => {
         if (!aiInsight && !isGeneratingInsight) {
@@ -282,18 +301,27 @@ const Dashboard: React.FC<DashboardProps> = ({ assets, cryptoCurrencies, setCryp
 
     return (
         <div className="space-y-8">
+            {/* Crypto Ticker */}
             <CryptoTicker cryptoCurrencies={cryptoCurrencies} />
+
+            {/* Portfolio Metrics Cards */}
+            <PortfolioMetricsCards
+                totalValue={portfolioMetrics.totalValue}
+                change24h={portfolioMetrics.change24h}
+                assetCount={portfolioMetrics.assetCount}
+                topAssetChange={portfolioMetrics.topAssetChange}
+                avgAssetValue={portfolioMetrics.avgAssetValue}
+                cryptoAllocation={portfolioMetrics.cryptoAllocation}
+            />
+
+            {/* Main Charts Row */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2">
-                    <Card>
-                        <div className="flex justify-between items-start mb-4">
-                            <div>
-                                <h2 className="text-sm text-gray-400">Portfolio Value</h2>
-                            </div>
-                            <TimeRangeSelector selectedRange={timeRange} onSelect={setTimeRange} />
-                        </div>
-                        <PortfolioChart history={portfolioHistory} timeRange={timeRange} />
-                    </Card>
+                    <div className="flex justify-between items-center mb-4">
+                        <h2 className="text-2xl font-bold text-white">Portfolio Performance</h2>
+                        <TimeRangeSelector selectedRange={timeRange} onSelect={setTimeRange} />
+                    </div>
+                    <PerformanceTrendChart data={filteredHistory} timeRange={timeRange} />
                 </div>
                 <div className="space-y-6">
                     <Card>
@@ -307,7 +335,7 @@ const Dashboard: React.FC<DashboardProps> = ({ assets, cryptoCurrencies, setCryp
                             {isGeneratingInsight ? 'Analyzing your portfolio...' : aiInsight}
                         </p>
                     </Card>
-                     <Card>
+                    <Card>
                         <h2 className="text-lg font-semibold text-white">Watchlist</h2>
                         <div className="mt-2 space-y-2">
                             {favoriteCryptos.length > 0 ? favoriteCryptos.map(crypto => (
@@ -321,29 +349,28 @@ const Dashboard: React.FC<DashboardProps> = ({ assets, cryptoCurrencies, setCryp
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                 <Card>
-                    <h2 className="text-lg font-semibold text-white mb-4">Market Movers (24h)</h2>
-                    <div className="space-y-2">
-                        {topMovers.map(crypto => {
-                            const isPositive = crypto.change24h >= 0;
-                            return (
-                                <div key={crypto.id} className="flex justify-between items-center text-sm">
-                                    <div className="flex items-center gap-2">
-                                         <button onClick={() => handleToggleFavorite(crypto.id)} className="text-gray-600 hover:text-yellow-400">
-                                            <StarIcon className="w-4 h-4" filled={!!crypto.isFavorite}/>
-                                        </button>
-                                        <span className="font-semibold text-gray-300">{crypto.name}</span>
-                                    </div>
-                                    <div className={`font-semibold ${isPositive ? 'text-green-400' : 'text-red-400'}`}>
-                                        {isPositive ? '+' : ''}{crypto.change24h.toFixed(2)}%
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-                </Card>
+            {/* Analytics Row */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <AssetAllocationChart data={allocationData} />
+                <AssetDistribution assets={assets} categories={assetCategories} />
             </div>
+
+            {/* Market Analysis Row */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-2">
+                    <TopPerformersChart data={topPerformersData} />
+                </div>
+                <RiskAnalysis 
+                    cryptoCurrencies={cryptoCurrencies} 
+                    cryptoAllocation={portfolioMetrics.cryptoAllocation} 
+                />
+            </div>
+
+            {/* Crypto Market Heatmap */}
+            <CryptoMarketHeatmap 
+                cryptoCurrencies={cryptoCurrencies} 
+                onToggleFavorite={handleToggleFavorite} 
+            />
         </div>
     );
 };
