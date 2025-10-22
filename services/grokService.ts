@@ -80,7 +80,7 @@ export async function sendGrokChat(request: GrokChatRequest, vaultItems?: Decryp
   const apiKey = getGrokApiKey(vaultItems);
   
   const requestBody = {
-    model: request.model || 'grok-beta',
+    model: request.model || 'grok-3',
     messages: request.messages,
     temperature: request.temperature ?? 0.7,
     max_tokens: request.max_tokens ?? 1024,
