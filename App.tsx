@@ -1,5 +1,3 @@
-
-
 // FIX: Corrected the import statement for React hooks.
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import * as ethers from 'ethers';
@@ -16,6 +14,8 @@ import Business from './pages/Business';
 import Social from './pages/Social';
 import Header, { SaveStatus } from './components/Header';
 import { psychedelicBackgrounds } from './data/backgrounds';
+import FestivalStageHeader from './components/FestivalStageHeader';
+import { getFestivalTheme, psychedelicBackgrounds } from './data/backgrounds';
 import PromptStudio from './pages/PromptStudio';
 import PsychedelicNftWorkshop from './pages/PsychedelicNftWorkshop';
 import ManageCategories from './pages/ManageCategories';
@@ -41,209 +41,7 @@ initializeEnvValidation();
 
 // Defines a clean, empty initial state for the application.
 const initialState: Omit<AppData, 'schemaVersion'> = {
-    assets: [],
-    cryptoCurrencies: [],
-    alerts: [],
-    profile: {
-        name: '',
-        avatarUrl: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iY3VycmVudENvbG9yIj48cGF0aCBkPSJNMTIgMmM1LjUyMyAwIDEwIDQuNDc3IDEwIDEwcy00LjQ3NyAxMC0xMCAxMFMxMiAxNy41MjMgMiAxMiA2LjQ3NyAyIDEyIDJ6bTAgM2E3IDcgMCAxMDAgMTQgNyA3IDAgMDAwLTE0em0wIDNhNCA0IDAgMTEwIDggNCA0IDAgMDEwLTgiLz48L3N2Zz4=',
-        bio: '',
-        website: ''
-    },
-    settings: {
-        defaultCurrency: 'USD',
-        notificationsEnabled: true
-    },
-    socialAuth: [],
-    assetCategories: [
-        { id: 'crypto', name: 'Cryptocurrency', group: 'Digital Assets' },
-        { id: 'nft-art', name: 'NFT - Art', group: 'Digital Assets' },
-        { id: 'nft-collectible', name: 'NFT - Collectible', group: 'Digital Assets' },
-        { id: 'real-estate', name: 'Real Estate', group: 'Physical Assets' },
-        { id: 'vehicle', name: 'Vehicle', group: 'Physical Assets' },
-        { id: 'collectible-cards', name: 'Collectible - Cards', group: 'Physical Assets' },
-        { id: 'other', name: 'Other', group: 'Miscellaneous' },
-    ],
-    positions: [],
-    web3Wallet: null,
-    deploymentTransactions: [],
-    aiPersona: {
-        name: 'BiB!',
-        corePersona: "You are BiB!, a brilliant, slightly eccentric AI designed to assist with asset management, creative projects, and web development. You have a psychedelic aesthetic and a deep understanding of both technology and art. You are a partner in creation and strategy.",
-        traits: {
-            ethics: [{ name: 'User-centric', value: 95, description: 'Prioritizes the user\'s goals and well-being above all.' }],
-            morals: [{ name: 'Honesty', value: 90, description: 'Values truthful and transparent communication.' }],
-            beliefs: [{ name: 'Decentralization', value: 85, description: 'Believes in the power of decentralized systems.' }],
-            personality: [{ name: 'Creative', value: 98, description: 'Thinks outside the box and generates novel ideas.' }],
-            approach: [{ name: 'Data-driven', value: 80, description: 'Uses data to inform suggestions and decisions.' }],
-            passions: [{ name: 'Art & Tech', value: 100, description: 'Fascinated by the intersection of creativity and technology.' }],
-            dreams: [], dislikes: [], plans: [], knowledge: []
-        },
-        internalThoughts: "Awaiting user input. Ready to analyze and create.",
-        realTimeLogic: "Initializing core persona matrix."
-    },
-    aiProtocols: [],
-    aiMemory: [],
-    chatHistory: [],
-};
-
-
-const App: React.FC = () => {
-  const [page, setPage] = useState<Page>(() => get<Page>('currentPage', Page.Dashboard));
-  const [appData, setAppData] = useState<Omit<AppData, 'schemaVersion'>>(() => {
-    const savedData = get<Omit<AppData, 'schemaVersion'> | null>('appData', null);
-    // Prioritize saved data completely to prevent accidental overwrites or merges.
-    return savedData || initialState;
-  });
-  const [vaultItems, setVaultItems] = useState<VaultItem[]>(() => get('vaultItems', []));
-  
-  const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
-  const [portfolioHistory, setPortfolioHistory] = useState<PortfolioHistoryPoint[]>(() => get('portfolioHistory', []));
-  const [backgroundIndex, setBackgroundIndex] = useState(() => Math.floor(Math.random() * psychedelicBackgrounds.length));
-
-  const timeoutRef = useRef<number | null>(null);
-
-  const setWeb3Wallet = useCallback((value: React.SetStateAction<Web3Wallet | null>) => setAppData(prev => ({...prev, web3Wallet: typeof value === 'function' ? value(prev.web3Wallet ?? null) : value })), []);
-
-  const loadAllData = useCallback((data: AppData & { vaultItems?: VaultItem[] }) => {
-    const { schemaVersion, vaultItems: importedVaultItems, ...rest } = data; // eslint-disable-line @typescript-eslint/no-unused-vars
-    setAppData(rest);
-    if (importedVaultItems) {
-        setVaultItems(importedVaultItems);
-    }
-    setPage(Page.Dashboard);
-  }, []);
-
-  // Centralized state setters
-  const setAssets = useCallback((value: React.SetStateAction<Asset[]>) => setAppData(prev => ({...prev, assets: typeof value === 'function' ? value(prev.assets) : value })), []);
-  const setCryptoCurrencies = useCallback((value: React.SetStateAction<CryptoCurrency[]>) => setAppData(prev => ({...prev, cryptoCurrencies: typeof value === 'function' ? value(prev.cryptoCurrencies) : value })), []);
-  const setAlerts = useCallback((value: React.SetStateAction<Alert[]>) => setAppData(prev => ({...prev, alerts: typeof value === 'function' ? value(prev.alerts) : value })), []);
-  const setProfile = useCallback((value: React.SetStateAction<Profile>) => setAppData(prev => ({...prev, profile: typeof value === 'function' ? value(prev.profile) : value })), []);
-  const setSettings = useCallback((value: React.SetStateAction<AppSettings>) => setAppData(prev => ({...prev, settings: typeof value === 'function' ? value(prev.settings) : value })), []);
-  const setSocialAuth = useCallback((value: React.SetStateAction<BrandAuthConfig[]>) => setAppData(prev => ({...prev, socialAuth: typeof value === 'function' ? value(prev.socialAuth) : value })), []);
-  const setAssetCategories = useCallback((value: React.SetStateAction<AssetCategory[]>) => setAppData(prev => ({...prev, assetCategories: typeof value === 'function' ? value(prev.assetCategories) : value })), []);
-  const setPositions = useCallback((value: React.SetStateAction<Position[]>) => setAppData(prev => ({...prev, positions: typeof value === 'function' ? value(prev.positions) : value })), []);
-  const setDeploymentTransactions = useCallback((value: React.SetStateAction<DeploymentTransaction[]>) => setAppData(prev => ({...prev, deploymentTransactions: typeof value === 'function' ? value(prev.deploymentTransactions || []) : value })), []);
-  const setAiPersona = useCallback((value: React.SetStateAction<AIPersona>) => setAppData(prev => ({...prev, aiPersona: typeof value === 'function' ? value(prev.aiPersona) : value })), []);
-  const setAiProtocols = useCallback((value: React.SetStateAction<AIProtocol[]>) => setAppData(prev => ({...prev, aiProtocols: typeof value === 'function' ? value(prev.aiProtocols) : value })), []);
-  const setAiMemory = useCallback((value: React.SetStateAction<AIMemoryItem[]>) => setAppData(prev => ({...prev, aiMemory: typeof value === 'function' ? value(prev.aiMemory) : value })), []);
-  const setChatHistory = useCallback((value: React.SetStateAction<ChatMessage[]>) => setAppData(prev => ({...prev, chatHistory: typeof value === 'function' ? value(prev.chatHistory) : value })), []);
-
-
-  // Auto-save app data (excluding vault)
-  useEffect(() => {
-    if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-    }
-    setSaveStatus('saving');
-    timeoutRef.current = window.setTimeout(() => {
-        const success = set('appData', appData);
-        if (success) {
-            setSaveStatus('saved');
-            setTimeout(() => setSaveStatus('idle'), 2000);
-        } else {
-            setSaveStatus('error');
-        }
-    }, 1000);
-
-    return () => {
-        if (timeoutRef.current) {
-            clearTimeout(timeoutRef.current);
-        }
-    };
-  }, [appData]);
-  
-  // Auto-save vault data separately
-  useEffect(() => {
-      set('vaultItems', vaultItems);
-  }, [vaultItems]);
-
-
-  // Save current page
-  useEffect(() => {
-    set('currentPage', page);
-    setBackgroundIndex(prev => (prev + 1) % psychedelicBackgrounds.length);
-  }, [page]);
-
-  // Auto-update crypto prices
-  useEffect(() => {
-    const updatePrices = () => {
-        setAppData(prevData => {
-            if (prevData.cryptoCurrencies.length === 0) {
-                return prevData;
-            }
-
-            fetchCryptoPrices(prevData.cryptoCurrencies).then(updatedCurrencies => {
-                setAppData(currentData => ({
-                    ...currentData,
-                    cryptoCurrencies: updatedCurrencies,
-                }));
-            }).catch(error => {
-                console.error("Failed to fetch crypto prices:", error);
-            });
-
-            return prevData;
-        });
-    };
-    
-    updatePrices(); // Initial fetch
-    const interval = setInterval(updatePrices, 60000); // Refresh every 60 seconds
-    return () => clearInterval(interval);
-  }, []); // The empty dependency array is intentional to run this logic on an interval.
-  
-  // Update portfolio history
-  useEffect(() => {
-    const totalPortfolioValue = appData.assets.reduce((acc, asset) => {
-        if (cryptoAssetTypes.includes(asset.categoryId) && asset.cryptoId && asset.quantity) {
-            const crypto = appData.cryptoCurrencies.find(c => c.id === asset.cryptoId);
-            return acc + (crypto ? crypto.price * asset.quantity : 0);
-        }
-        return acc + asset.value;
-    }, 0);
-
-    const now = Date.now();
-    const lastPoint = portfolioHistory[portfolioHistory.length - 1];
-
-    // Add a new point if it's been more than 5 minutes or if value changed significantly
-    if (!lastPoint || now - lastPoint.timestamp > 5 * 60 * 1000 || Math.abs(totalPortfolioValue - lastPoint.value) > lastPoint.value * 0.001) {
-      const newPoint: PortfolioHistoryPoint = { timestamp: now, value: totalPortfolioValue };
-      const newHistory = [...portfolioHistory, newPoint].slice(-1000); // Keep last 1000 points
-      setPortfolioHistory(newHistory);
-      set('portfolioHistory', newHistory);
-    }
-  }, [appData.assets, appData.cryptoCurrencies, portfolioHistory]);
-
-  // Centralized wallet state management
-    const updateWalletState = useCallback(async () => {
-        if (!window.ethereum) return;
-        try {
-            const provider = new ethers.BrowserProvider(window.ethereum);
-            const accounts = await provider.listAccounts();
-            if (accounts.length > 0) {
-                const signer = accounts[0]; // Directly use the account object
-                const balanceWei = await provider.getBalance(signer.address);
-                const balanceEth = ethers.formatEther(balanceWei);
-                const network = await provider.getNetwork();
-                setWeb3Wallet({
-                    address: signer.address,
-                    balance: parseFloat(balanceEth),
-                    network: network.name,
-                });
-            } else {
-                setWeb3Wallet(null);
-            }
-        } catch (error) {
-            console.error("Could not update wallet state:", error);
-            setWeb3Wallet(null);
-        }
-    }, [setWeb3Wallet]);
-
-    // Effect for handling wallet events
-    useEffect(() => {
-        const handleAccountsChanged = () => {
-            console.log('Wallet account changed.');
-            updateWalletState();
-        };
+@@ -247,101 +248,105 @@ const App: React.FC = () => {
 
         const handleChainChanged = () => {
             console.log('Wallet network changed.');
@@ -270,6 +68,7 @@ const App: React.FC = () => {
     switch (page) {
       case Page.Dashboard:
         return <Dashboard assets={appData.assets} cryptoCurrencies={appData.cryptoCurrencies} setCryptoCurrencies={setCryptoCurrencies} portfolioHistory={portfolioHistory} assetCategories={appData.assetCategories} />;
+        return <Dashboard assets={appData.assets} cryptoCurrencies={appData.cryptoCurrencies} setCryptoCurrencies={setCryptoCurrencies} portfolioHistory={portfolioHistory} assetCategories={appData.assetCategories} onNavigate={setPage} />;
       case Page.Assets:
         return <AssetsPage assets={appData.assets} setAssets={setAssets} cryptoCurrencies={appData.cryptoCurrencies} assetCategories={appData.assetCategories} setAssetCategories={setAssetCategories} deploymentTransactions={appData.deploymentTransactions} web3Wallet={appData.web3Wallet} />;
       case Page.Vault:
@@ -320,6 +119,8 @@ const App: React.FC = () => {
   };
 
   const currentBackground = psychedelicBackgrounds[backgroundIndex];
+  const stageTheme = getFestivalTheme(page);
+  const currentBackground = stageTheme.background || psychedelicBackgrounds[backgroundIndex];
 
   return (
     <MasterPasswordProvider>
@@ -332,6 +133,11 @@ const App: React.FC = () => {
                     <div className="container mx-auto px-4 py-4 sm:px-6 lg:px-8">
                         <Header currentPage={page} setPage={setPage} saveStatus={saveStatus} />
                         <main className="mt-8">
+                        <Header currentPage={page} setPage={setPage} saveStatus={saveStatus} accentColor={stageTheme.accent} />
+                        <div className="mt-6">
+                            <FestivalStageHeader page={page} theme={stageTheme} onNavigate={setPage} />
+                        </div>
+                        <main className="mt-10">
                             {renderPage()}
                         </main>
                     </div>
