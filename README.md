@@ -1,113 +1,145 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# BiB! Systems Monitor
 
-# Run and deploy your AI Studio app
+A real-time monitoring system for the BiB! AI platform, featuring a Flask backend API and React frontend dashboard.
 
-This contains everything you need to run your app locally.
+## Project Structure
 
-View your app in AI Studio: https://ai.studio/apps/drive/19vRKnMb6kcW14AemxY-5_TeNl6hdu_KZ
+```
+bib_systems_monitor/
+├── backend/              # Flask API backend
+│   ├── app.py           # Main Flask application
+│   ├── requirements.txt # Python dependencies
+│   └── .env.example     # Environment variables template
+├── frontend/            # React frontend
+│   ├── package.json     # Node.js dependencies
+│   ├── public/
+│   │   └── index.html   # HTML template
+│   └── src/
+│       ├── index.js     # React entry point
+│       ├── App.js       # Main App component
+│       ├── App.css      # Global styles
+│       └── components/  # React components
+│           ├── MetricCard.js       # Display individual metrics
+│           ├── StatusIndicator.js  # System status indicator
+│           ├── RealtimeChart.js    # Real-time metrics chart
+│           └── BibMetrics.js       # BiB-specific metrics
+├── README.md            # This file
+└── .gitignore          # Git ignore rules
+```
 
-## Run Locally
+## Features
 
-**Prerequisites:**  Node.js
+- **Real-time Monitoring**: Live updates of system metrics every 5 seconds
+- **Interactive Dashboard**: Visual representation of CPU, memory, and network metrics
+- **Status Indicators**: Color-coded system status (Active, Warning, Error)
+- **REST API**: Clean API endpoints for metrics management
+- **Responsive Design**: Works on desktop and mobile devices
 
-1. Install dependencies:
-   ```bash
-   npm install
-   ```
+## Backend Setup
 
-2. Set up environment variables:
-   
-   Copy the `.env.example` file to `.env`:
-   ```bash
-   cp .env.example .env
-   ```
-   
-   Edit `.env` and add your API keys:
-   ```
-   VITE_GEMINI_API_KEY=your_gemini_api_key_here
-   VITE_OPENAI_API_KEY=your_openai_api_key_here
-   VITE_ANTHROPIC_API_KEY=your_anthropic_api_key_here
-   ```
-   
-   **Important:** Environment variables must be prefixed with `VITE_` to be accessible in the browser.
+### Prerequisites
+- Python 3.8+
+- pip
 
-3. Run the app:
-   ```bash
-   npm run dev
-   ```
+### Installation
 
-## Environment Variables
+1. Navigate to the backend directory:
+```bash
+cd backend
+```
 
-### Why VITE_ prefix?
+2. Install dependencies:
+```bash
+pip install -r requirements.txt
+```
 
-Vite (the build tool used by this project) requires environment variables that should be exposed to the browser to be prefixed with `VITE_`. This is a security feature to prevent accidentally exposing server-side secrets.
+3. Create environment file:
+```bash
+cp .env.example .env
+```
 
-### Available API Keys
+4. Run the server:
+```bash
+python app.py
+```
 
-- `VITE_GEMINI_API_KEY` - Google Gemini API key (required for AI features)
-- `VITE_OPENAI_API_KEY` - OpenAI API key (optional, for OpenAI features)
-- `VITE_ANTHROPIC_API_KEY` - Anthropic Claude API key (optional, for Claude features)
+The API will be available at `http://localhost:5000`
 
-### Development vs Production
+### API Endpoints
 
-- **Development**: Environment variables are loaded from `.env` file automatically
-- **Production**: You must set environment variables in your hosting platform (Vercel, Netlify, etc.)
-  - Make sure to use the same `VITE_` prefixed variable names
-  - The build process will inline these values during the build step
+- `GET /api/health` - Health check
+- `GET /api/metrics` - Get current metrics
+- `POST /api/metrics` - Update metrics
 
-### Debugging
+## Frontend Setup
 
-The app logs the status of environment variables to the browser console on startup in **both development and production modes**. Check the console to verify your API keys are loaded correctly.
+### Prerequisites
+- Node.js 16+
+- npm or yarn
 
-**Development Mode:**
-- Shows all VITE_ variable names
-- Shows detailed debugging information
+### Installation
 
-**Production Mode:**
-- Shows whether keys are loaded (✅/❌)
-- Shows environment mode
-- Shows warnings if keys are missing
+1. Navigate to the frontend directory:
+```bash
+cd frontend
+```
 
-### Common Issues
+2. Install dependencies:
+```bash
+npm install
+```
 
-**"Gemini API key is not configured" error:**
-- Make sure you have created a `.env` file from `.env.example`
-- Verify your `.env` file contains `VITE_GEMINI_API_KEY=your_actual_key`
-- Restart the dev server after creating or modifying the `.env` file
-- Check the browser console for the environment status log
+3. Create environment file (optional):
+```bash
+echo "REACT_APP_API_URL=http://localhost:5000/api" > .env
+```
 
-**API calls failing:**
-- Verify your API key is valid in the provider's dashboard (Google AI Studio, OpenAI, etc.)
-- Check that the key has the necessary permissions
-- Ensure you haven't exceeded rate limits
+4. Start the development server:
+```bash
+npm start
+```
 
-For detailed troubleshooting, see [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md).
+The app will be available at `http://localhost:3000`
 
-## Deployment
+### Production Build
 
-For comprehensive deployment instructions including platform-specific guides (Vercel, Netlify, Cloudflare, etc.), see the **[DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md)**.
+```bash
+npm run build
+```
 
-### Quick Deployment Steps
+## Development
 
-When deploying to production:
+### Running Both Services
 
-1. Set environment variables in your hosting platform with the `VITE_` prefix
-2. Run `npm run build` to create the production build
-3. Deploy the `dist` folder to your hosting service
+Terminal 1 (Backend):
+```bash
+cd backend
+python app.py
+```
 
-The environment variables will be embedded in the JavaScript bundle during the build process.
+Terminal 2 (Frontend):
+```bash
+cd frontend
+npm start
+```
 
-### Verifying Deployment
+## Technologies
 
-After deployment:
-1. Open your deployed site
-2. Open the browser console
-3. Check for the environment status log showing "✅ Loaded" for all required keys
+### Backend
+- Flask - Web framework
+- Flask-CORS - Cross-origin resource sharing
+- Python-dotenv - Environment variable management
 
-## Documentation
+### Frontend
+- React 18 - UI framework
+- Axios - HTTP client
+- Recharts - Charting library
+- CSS3 - Styling with gradients and animations
 
-- **[DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md)** - Comprehensive deployment guide with platform-specific instructions
-- **[ENV_CONFIG.md](./ENV_CONFIG.md)** - Detailed environment variable configuration guide
-- **[API_KEY_FIX_SUMMARY.md](./API_KEY_FIX_SUMMARY.md)** - Technical implementation details
+## Contributing
+
+This is part of the TroupeCrypto/TrouPriv project. Please follow the existing code style and patterns.
+
+## License
+
+Proprietary - TroupeCrypto
