@@ -97,8 +97,35 @@ export async function sendGrokChat(request: GrokChatRequest, vaultItems?: Decryp
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ error: { message: 'Unknown error' } }));
-      throw new Error(`Grok API error: ${errorData.error?.message || response.statusText}`);
+      // Try to parse error response with multiple fallbacks for different error formats
+      let errorMessage = response.statusText;
+      
+      try {
+        const errorData = await response.json();
+        
+        // Handle different error response formats from xAI API
+        if (errorData.error?.message) {
+          // OpenAI-compatible format: { error: { message: "..." } }
+          errorMessage = errorData.error.message;
+        } else if (errorData.message) {
+          // Direct message format: { message: "..." }
+          errorMessage = errorData.message;
+        } else if (errorData.detail) {
+          // FastAPI format: { detail: "..." }
+          errorMessage = errorData.detail;
+        } else if (typeof errorData === 'string') {
+          // Plain string error
+          errorMessage = errorData;
+        } else if (errorData.error) {
+          // Error object without message
+          errorMessage = JSON.stringify(errorData.error);
+        }
+      } catch (parseError) {
+        // If JSON parsing fails, use status text
+        errorMessage = `${response.status} ${response.statusText}`;
+      }
+      
+      throw new Error(`Grok API error (${response.status}): ${errorMessage}`);
     }
 
     const data: GrokChatResponse = await response.json();
