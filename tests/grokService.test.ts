@@ -151,7 +151,7 @@ describe('Grok Service', () => {
           id: 'chatcmpl-123',
           object: 'chat.completion',
           created: 1234567890,
-          model: 'grok-beta',
+          model: 'grok-3',
           choices: [
             {
               index: 0,
@@ -187,7 +187,7 @@ describe('Grok Service', () => {
           id: 'chatcmpl-123',
           object: 'chat.completion',
           created: 1234567890,
-          model: 'grok-beta',
+          model: 'grok-3',
           choices: []
         })
       });
