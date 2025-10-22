@@ -111,3 +111,4 @@ After deployment:
 - **[DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md)** - Comprehensive deployment guide with platform-specific instructions
 - **[ENV_CONFIG.md](./ENV_CONFIG.md)** - Detailed environment variable configuration guide
 - **[API_KEY_FIX_SUMMARY.md](./API_KEY_FIX_SUMMARY.md)** - Technical implementation details
+- **[SYSTEM_ANALYTICS.md](./System_Analytics.md)** - Implementation of the system analytics dashboard. 
