@@ -1,5 +1,5 @@
-
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
+import React, { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import { GoogleGenAI } from "@google/genai";
 import { Asset, CryptoCurrency, PortfolioHistoryPoint, cryptoAssetTypes, AssetCategory } from '../types';
 // FIX: Use relative paths for local modules
@@ -25,84 +25,7 @@ const Card: React.FC<{ children: React.ReactNode, className?: string }> = ({ chi
 );
 
 const SparklineChart: React.FC<{ data: number[]; color: string; }> = ({ data, color }) => {
-    if (!data || data.length < 2) return null;
-
-    const width = 60;
-    const height = 20;
-    const padding = 2;
-
-    const max = Math.max(...data);
-    const min = Math.min(...data);
-    const range = max - min === 0 ? 1 : max - min;
-
-    const points = data
-        .map((d, i) => {
-            const x = (i / (data.length - 1)) * width;
-            const y = height - padding - ((d - min) / range) * (height - padding * 2);
-            return `${x.toFixed(2)},${y.toFixed(2)}`;
-        })
-        .join(' ');
-
-    return (
-        <svg viewBox={`0 0 ${width} ${height}`} width={width} height={height} className="ml-4">
-            <polyline
-                fill="none"
-                stroke={color}
-                strokeWidth="1.5"
-                points={points}
-            />
-        </svg>
-    );
-};
-
-const CryptoTicker: React.FC<{ cryptoCurrencies: CryptoCurrency[] }> = ({ cryptoCurrencies }) => (
-    <div className="relative w-full overflow-hidden bg-gray-900/50 py-4 border-y border-white/10">
-        <div className="flex animate-marquee-infinite whitespace-nowrap">
-            {cryptoCurrencies.concat(cryptoCurrencies).map((crypto, index) => {
-                 const isPositive = crypto.change24h >= 0;
-                 return (
-                    <div key={`${crypto.id}-${index}`} className="flex items-center mx-6">
-                        <CryptoIcon symbol={crypto.symbol} className="mr-2" />
-                        <span className="text-gray-400">{crypto.symbol}</span>
-                        <span className="ml-2 text-white font-mono">${crypto.price.toFixed(2)}</span>
-                        <span className={`ml-2 text-xs font-semibold flex items-center ${isPositive ? 'text-green-400' : 'text-red-400'}`}>
-                            {isPositive ? <ArrowUpIcon className="w-3 h-3"/> : <ArrowDownIcon className="w-3 h-3"/>}
-                            {Math.abs(crypto.change24h).toFixed(2)}%
-                        </span>
-                        <SparklineChart data={crypto.priceHistory} color={isPositive ? '#4ade80' : '#f87171'} />
-                    </div>
-                );
-            })}
-        </div>
-        <style>{`
-            @keyframes marquee-infinite {
-                0% { transform: translateX(0%); }
-                100% { transform: translateX(-50%); }
-            }
-            .animate-marquee-infinite {
-                animation: marquee-infinite 20s linear infinite;
-            }
-        `}</style>
-    </div>
-);
-
-const TimeRangeSelector: React.FC<{
-    selectedRange: TimeRange;
-    onSelect: (range: TimeRange) => void;
-}> = ({ selectedRange, onSelect }) => {
-    const ranges: { label: string; value: TimeRange }[] = [
-        { label: '24H', value: '24h' },
-        { label: '7D', value: '7d' },
-        { label: '1M', value: '1m' },
-        { label: 'All', value: 'all' },
-    ];
-
-    return (
-        <div className="flex gap-2 bg-gray-800/50 p-1 rounded-md">
-            {ranges.map(range => (
-                <button
-                    key={range.value}
-                    onClick={() => onSelect(range.value)}
+@@ -106,96 +106,122 @@ const TimeRangeSelector: React.FC<{
                     className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors ${
                         selectedRange === range.value
                             ? 'bg-cyan-500 text-white'
@@ -128,11 +51,16 @@ const Dashboard: React.FC<DashboardProps> = ({ assets, cryptoCurrencies, setCryp
     const [timeRange, setTimeRange] = useState<TimeRange>('24h');
     const [aiInsight, setAiInsight] = useState<string>(() => get('dashboard_ai_insight', ''));
     const [isGeneratingInsight, setIsGeneratingInsight] = useState(false);
+    const [parallaxOffset, setParallaxOffset] = useState({ x: 0, y: 0 });
+    const heroRef = useRef<HTMLDivElement | null>(null);
+    const parallaxFrame = useRef<number | null>(null);
+    const [activeZone, setActiveZone] = useState(0);
 
     // Calculate portfolio metrics
     const portfolioMetrics = useMemo(() => {
         const categoryMap = new Map(assetCategories.map(c => [c.id, c.group]));
         
+
         let totalValue = 0;
         let cryptoValue = 0;
         const assetChanges: number[] = [];
@@ -174,6 +102,28 @@ const Dashboard: React.FC<DashboardProps> = ({ assets, cryptoCurrencies, setCryp
         };
     }, [assets, cryptoCurrencies, portfolioHistory, assetCategories]);
 
+    const heroStats = useMemo(() => ([
+        {
+            label: 'Portfolio Value',
+            value: `$${portfolioMetrics.totalValue.toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+            })}`,
+        },
+        {
+            label: '24h Pulse',
+            value: `${portfolioMetrics.change24h >= 0 ? '+' : ''}${portfolioMetrics.change24h.toFixed(2)}%`,
+        },
+        {
+            label: 'Assets Tracked',
+            value: `${portfolioMetrics.assetCount}`,
+        },
+        {
+            label: 'Crypto Flow',
+            value: `${portfolioMetrics.cryptoAllocation.toFixed(1)}%`,
+        },
+    ]), [portfolioMetrics]);
+
     // Calculate asset allocation data
     const allocationData = useMemo(() => {
         const categoryMap = new Map(assetCategories.map(c => [c.id, c.group]));
@@ -199,8 +149,7 @@ const Dashboard: React.FC<DashboardProps> = ({ assets, cryptoCurrencies, setCryp
 
     // Calculate top performers data
     const topPerformersData = useMemo(() => {
-        const performers: { name: string; change: number; value: number }[] = [];
-        
+@@ -204,175 +230,367 @@ const Dashboard: React.FC<DashboardProps> = ({ assets, cryptoCurrencies, setCryp
         cryptoCurrencies.forEach(crypto => {
             const asset = assets.find(a => a.cryptoId === crypto.id);
             const value = asset && asset.quantity ? crypto.price * asset.quantity : crypto.price;
@@ -293,12 +242,94 @@ const Dashboard: React.FC<DashboardProps> = ({ assets, cryptoCurrencies, setCryp
         }
     }, [portfolioMetrics.totalValue, topMovers, assets, assetCategories, cryptoCurrencies]);
     
+
+    const festivalZones = useMemo(() => {
+        const topMover = topMovers[0];
+        const secondMover = topMovers[1];
+        const thirdMover = topMovers[2];
+
+        return [
+            {
+                name: 'Sonic Liquidity Stage',
+                description: 'Live analytics pulse with every beat—watch your performance stream in real time.',
+                image: '/images/troupe/melting-speakers.png',
+                statLabel: 'Headliner',
+                statValue: topMover ? `${topMover.name} ${topMover.change24h >= 0 ? '+' : ''}${topMover.change24h.toFixed(2)}%` : 'Awaiting lineup',
+            },
+            {
+                name: 'Nebula Vault Lounge',
+                description: 'Safeguard hidden gems while monitoring value surges from the comfort of zero gravity.',
+                image: '/images/troupe/astronaut-mushrooms.png',
+                statLabel: 'Vault Heat',
+                statValue: secondMover ? `${secondMover.name} ${secondMover.change24h >= 0 ? '+' : ''}${secondMover.change24h.toFixed(2)}%` : 'No spikes yet',
+            },
+            {
+                name: 'Oracle Card Lab',
+                description: 'Futureproof your strategy with surreal NFT insights and distribution magic.',
+                image: '/images/troupe/melting-cards.png',
+                statLabel: 'Mint Flow',
+                statValue: thirdMover ? `${thirdMover.name} ${thirdMover.change24h >= 0 ? '+' : ''}${thirdMover.change24h.toFixed(2)}%` : 'Calibrating',
+            },
+            {
+                name: 'VIP MoonRiver',
+                description: 'Unlock premium mixers, AI collabs, and member-only drops with your cosmic pass.',
+                image: '/images/troupe/member-pass.png',
+                statLabel: 'Access Level',
+                statValue: portfolioMetrics.assetCount > 0 ? `${portfolioMetrics.assetCount} assets` : 'Claim your first asset',
+            },
+        ];
+    }, [portfolioMetrics.assetCount, topMovers]);
+
+    const collectibleHighlights = useMemo(() => ([
+        {
+            title: 'Founders Member Pass',
+            description: 'VIP tunnels to backstage analytics and exclusive drops.',
+            image: '/images/troupe/member-pass.png',
+        },
+        {
+            title: 'Psychedelic Signal',
+            description: 'Real-time market cues inspired by the melty cosmos.',
+            image: '/images/troupe/troupe-cryptospace-monolith.png',
+        },
+        {
+            title: 'Artist Residency',
+            description: 'Collaborate with creative AIs and bring new assets to life.',
+            image: '/images/troupe/artist-portrait.png',
+        },
+        {
+            title: 'Mushroom Sound Lab',
+            description: 'Amplify performance data through immersive audio-reactive charts.',
+            image: '/images/troupe/mouth-mushrooms.png',
+        },
+        {
+            title: 'Cosmic Navigator',
+            description: 'A guided tour through every stage of the CryptoSpace festival.',
+            image: '/images/troupe/rabbit-conductor.png',
+        },
+    ]), []);
+
     useEffect(() => {
         if (!aiInsight && !isGeneratingInsight) {
             generateAiInsight();
+        if (festivalZones.length === 0) {
+            return undefined;
         }
     }, [aiInsight, generateAiInsight, isGeneratingInsight]);
 
+        const interval = window.setInterval(() => {
+            setActiveZone(prev => (prev + 1) % festivalZones.length);
+        }, 7000);
+
+        return () => window.clearInterval(interval);
+    }, [festivalZones.length]);
+
+    useEffect(() => () => {
+        if (parallaxFrame.current) {
+            cancelAnimationFrame(parallaxFrame.current);
+        }
+    }, []);
+
+    
     return (
         <div className="space-y-8">
             {/* Crypto Ticker */}
@@ -313,6 +344,27 @@ const Dashboard: React.FC<DashboardProps> = ({ assets, cryptoCurrencies, setCryp
                 avgAssetValue={portfolioMetrics.avgAssetValue}
                 cryptoAllocation={portfolioMetrics.cryptoAllocation}
             />
+        <div className="space-y-12">
+            <section
+                ref={heroRef}
+                onMouseMove={handleHeroMouseMove}
+                onMouseLeave={handleHeroMouseLeave}
+                className="relative overflow-hidden rounded-3xl border border-white/15 bg-black/40 text-white shadow-[0_0_50px_rgba(96,165,250,0.15)]"
+            >
+                <div className="absolute inset-0">
+                    <img
+                        src="/images/troupe/troupe-cryptospace-panorama.png"
+                        alt="Troupe CryptoSpace universe"
+                        className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 ease-out"
+                        style={{ transform: `translate3d(${parallaxOffset.x * -1.2}px, ${parallaxOffset.y * -1.2}px, 0) scale(1.05)` }}
+                    />
+                    <div
+                        className="absolute inset-0 bg-gradient-to-br from-black/80 via-black/60 to-purple-900/60"
+                        style={{ transform: `translate3d(${parallaxOffset.x * 0.1}px, ${parallaxOffset.y * 0.1}px, 0)` }}
+                    />
+                    <div className="pointer-events-none absolute -top-32 -right-16 h-72 w-72 rounded-full bg-fuchsia-500/40 blur-[110px]" />
+                    <div className="pointer-events-none absolute -bottom-24 -left-10 h-60 w-60 rounded-full bg-cyan-400/30 blur-[100px]" />
+                </div>
 
             {/* Main Charts Row */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -320,6 +372,60 @@ const Dashboard: React.FC<DashboardProps> = ({ assets, cryptoCurrencies, setCryp
                     <div className="flex justify-between items-center mb-4">
                         <h2 className="text-2xl font-bold text-white">Portfolio Performance</h2>
                         <TimeRangeSelector selectedRange={timeRange} onSelect={setTimeRange} />
+                <div className="relative grid gap-12 p-8 md:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] md:p-12">
+                    <div className="space-y-6">
+                        <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-black/40 px-4 py-1 text-xs uppercase tracking-[0.3em] text-cyan-200/90">
+                            <span className="h-2 w-2 animate-pulse rounded-full bg-cyan-300" />
+                            Troupe CryptoSpace Festival
+                        </div>
+                        <div className="space-y-4">
+                            <h1 className="text-3xl font-black tracking-tight sm:text-4xl lg:text-5xl">
+                                Dark, melty, and alive—your portfolio’s main stage.
+                            </h1>
+                            <p className="max-w-2xl text-base text-gray-200 sm:text-lg">
+                                Glide through glowing rivers of data and sound. This deluxe control room keeps every asset, beat, and NFT drop within reach while preserving the power tools you already rely on.
+                            </p>
+                        </div>
+                        <div className="grid gap-4 sm:grid-cols-2">
+                            {heroStats.map(stat => (
+                                <div
+                                    key={stat.label}
+                                    className="rounded-2xl border border-white/20 bg-white/10 p-4 backdrop-blur-xl transition hover:border-cyan-400/60 hover:bg-cyan-400/10"
+                                >
+                                    <p className="text-xs uppercase tracking-wide text-cyan-200/80">{stat.label}</p>
+                                    <p className="mt-2 text-2xl font-semibold text-white">{stat.value}</p>
+                                </div>
+                            ))}
+                        </div>
+                        {topMovers[0] && (
+                            <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-cyan-300/30 bg-black/50 px-4 py-3 backdrop-blur">
+                                <div className="flex items-center gap-2 text-sm text-cyan-200">
+                                    <SparklesIcon className="h-4 w-4" />
+                                    Now Streaming
+                                </div>
+                                <div className="text-lg font-semibold text-white">
+                                    {topMovers[0].name}
+                                </div>
+                                <div className={`text-sm font-medium ${topMovers[0].change24h >= 0 ? 'text-emerald-300' : 'text-red-300'}`}>
+                                    {topMovers[0].change24h >= 0 ? '+' : ''}{topMovers[0].change24h.toFixed(2)}%
+                                </div>
+                            </div>
+                        )}
+                        <div className="flex flex-wrap gap-3">
+                            <a
+                                href="#portfolio-performance"
+                                className="inline-flex items-center gap-2 rounded-full bg-cyan-400/90 px-5 py-2 text-sm font-semibold text-black shadow-lg shadow-cyan-500/30 transition hover:bg-cyan-300"
+                            >
+                                Enter Performance Flow
+                                <ArrowUpIcon className="h-4 w-4 rotate-45" />
+                            </a>
+                            <a
+                                href="#collectibles"
+                                className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-5 py-2 text-sm font-semibold text-white backdrop-blur transition hover:border-cyan-300/60 hover:text-cyan-100"
+                            >
+                                View Festival Zones
+                            </a>
+                        </div>
                     </div>
                     <PerformanceTrendChart data={filteredHistory} timeRange={timeRange} />
                 </div>
@@ -330,9 +436,79 @@ const Dashboard: React.FC<DashboardProps> = ({ assets, cryptoCurrencies, setCryp
                             <button onClick={generateAiInsight} disabled={isGeneratingInsight} className="text-cyan-400 p-1 rounded-full hover:bg-cyan-400/10 disabled:text-gray-500">
                                 {isGeneratingInsight ? <SpinnerIcon className="w-4 h-4" /> : <SparklesIcon className="w-4 h-4" />}
                             </button>
+
+                    <div className="relative">
+                        <div className="absolute -top-20 right-8 h-40 w-40 rounded-full bg-purple-500/40 blur-[100px]" />
+                        <div className="relative space-y-5 rounded-3xl border border-white/20 bg-black/60 p-6 backdrop-blur-xl">
+                            <div className="flex items-center justify-between gap-4">
+                                <div>
+                                    <p className="text-xs uppercase tracking-[0.3em] text-gray-400">Featured Zone</p>
+                                    <h2 className="mt-2 text-2xl font-semibold text-white">
+                                        {highlightedZone?.name || 'Cosmic Stage'}
+                                    </h2>
+                                </div>
+                                {highlightedZone && (
+                                    <div className="text-right">
+                                        <p className="text-xs uppercase tracking-widest text-cyan-200/70">{highlightedZone.statLabel}</p>
+                                        <p className="text-sm font-semibold text-white">{highlightedZone.statValue}</p>
+                                    </div>
+                                )}
+                            </div>
+                            <p className="text-sm leading-relaxed text-gray-200">
+                                {highlightedZone?.description || 'Select a festival zone to reveal its vibe and data focus.'}
+                            </p>
+                            <div className="grid gap-4 sm:grid-cols-2">
+                                {festivalZones.map((zone, index) => {
+                                    const isActive = index === (festivalZones.length > 0 ? activeZone % festivalZones.length : 0);
+                                    return (
+                                        <button
+                                            type="button"
+                                            key={zone.name}
+                                            onMouseEnter={() => setActiveZone(index)}
+                                            className={`group relative overflow-hidden rounded-2xl border bg-white/5 text-left transition ${
+                                                isActive ? 'border-cyan-300/80 shadow-[0_0_35px_rgba(45,212,191,0.35)]' : 'border-white/15 hover:border-cyan-200/60'
+                                            }`}
+                                        >
+                                            <span className="absolute inset-0">
+                                                <img
+                                                    src={zone.image}
+                                                    alt={zone.name}
+                                                    className={`h-full w-full object-cover transition duration-700 ease-out ${isActive ? 'scale-105' : 'scale-100 group-hover:scale-105'}`}
+                                                    style={{ transform: `translate3d(${parallaxOffset.x * -0.05}px, ${parallaxOffset.y * -0.05}px, 0)` }}
+                                                />
+                                                <span className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent" />
+                                            </span>
+                                            <span className="relative flex h-full flex-col justify-end gap-2 p-4">
+                                                <span className="text-xs font-semibold uppercase tracking-widest text-cyan-200/80">{zone.statLabel}</span>
+                                                <span className="text-sm font-semibold text-white">{zone.statValue}</span>
+                                                <span className="text-lg font-semibold text-white">{zone.name}</span>
+                                            </span>
+                                        </button>
+                                    );
+                            })}
                         </div>
                         <p className="text-sm text-gray-300 mt-2 min-h-[6em]">
                             {isGeneratingInsight ? 'Analyzing your portfolio...' : aiInsight}
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section
+            id="collectibles"
+            className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-black via-black/90 to-slate-900/90"
+        >
+            <div
+                className="absolute inset-0 opacity-30"
+                style={{ backgroundImage: 'url(/images/troupe/city-mushrooms-portrait.png)', backgroundSize: 'cover', backgroundPosition: 'center', filter: 'saturate(80%)' }}
+            />
+            <div className="absolute inset-0 bg-gradient-to-br from-black/70 via-black/60 to-purple-950/60" />
+            <div className="relative space-y-6 p-8 md:p-12">
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                    <div>
+                        <h2 className="text-2xl font-semibold text-white">Collect your Festival Keys</h2>
+                        <p className="max-w-2xl text-sm text-gray-200 md:text-base">
+                            Drift through these melty artifacts to unlock AI studios, vault rituals, and secret collaboration lounges. Every card links back to the tools already powering your experience.
                         </p>
                     </Card>
                     <Card>
@@ -340,6 +516,77 @@ const Dashboard: React.FC<DashboardProps> = ({ assets, cryptoCurrencies, setCryp
                         <div className="mt-2 space-y-2">
                             {favoriteCryptos.length > 0 ? favoriteCryptos.map(crypto => (
                                 <div key={crypto.id} className="flex justify-between items-center text-sm">
+                    </div>
+                    <div className="inline-flex items-center gap-2 rounded-full border border-cyan-200/40 bg-cyan-300/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-cyan-100">
+                        <SparklesIcon className="h-4 w-4" />
+                        Immersive Mode
+                    </div>
+                </div>
+                <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-5">
+                    {collectibleHighlights.map(item => (
+                        <div
+                            key={item.title}
+                            className="group relative min-h-[260px] overflow-hidden rounded-3xl border border-white/10 bg-black/40 p-4 backdrop-blur-xl transition hover:border-cyan-300/60 hover:shadow-[0_0_40px_rgba(45,212,191,0.35)]"
+                        >
+                            <div className="relative aspect-[4/5] overflow-hidden rounded-2xl">
+                                <img
+                                    src={item.image}
+                                    alt={item.title}
+                                    className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+                                />
+                                <span className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+                            </div>
+                            <div className="mt-4 space-y-2">
+                                <h3 className="text-lg font-semibold text-white">{item.title}</h3>
+                                <p className="text-sm text-gray-200">{item.description}</p>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </section>
+
+        <CryptoTicker cryptoCurrencies={cryptoCurrencies} />
+
+        <PortfolioMetricsCards
+            totalValue={portfolioMetrics.totalValue}
+            change24h={portfolioMetrics.change24h}
+            assetCount={portfolioMetrics.assetCount}
+            topAssetChange={portfolioMetrics.topAssetChange}
+            avgAssetValue={portfolioMetrics.avgAssetValue}
+            cryptoAllocation={portfolioMetrics.cryptoAllocation}
+        />
+
+        <div id="portfolio-performance" className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+            <div className="lg:col-span-2">
+                <div className="mb-4 flex items-center justify-between">
+                    <h2 className="text-2xl font-bold text-white">Portfolio Performance</h2>
+                    <TimeRangeSelector selectedRange={timeRange} onSelect={setTimeRange} />
+                </div>
+                <PerformanceTrendChart data={filteredHistory} timeRange={timeRange} />
+            </div>
+            <div className="space-y-6">
+                <Card>
+                    <div className="flex items-center justify-between">
+                        <h2 className="text-lg font-semibold text-white">AI Insight</h2>
+                        <button
+                            onClick={generateAiInsight}
+                            disabled={isGeneratingInsight}
+                            className="rounded-full p-1 text-cyan-400 hover:bg-cyan-400/10 disabled:text-gray-500"
+                        >
+                            {isGeneratingInsight ? <SpinnerIcon className="h-4 w-4" /> : <SparklesIcon className="h-4 w-4" />}
+                        </button>
+                    </div>
+                    <p className="mt-2 min-h-[6em] text-sm text-gray-300">
+                        {isGeneratingInsight ? 'Analyzing your portfolio...' : aiInsight}
+                    </p>
+                </Card>
+                <Card>
+                    <h2 className="text-lg font-semibold text-white">Watchlist</h2>
+                    <div className="mt-2 space-y-2">
+                        {favoriteCryptos.length > 0 ? (
+                            favoriteCryptos.map(crypto => (
+                                <div key={crypto.id} className="flex items-center justify-between text-sm">
                                     <span className="font-semibold text-gray-300">{crypto.name}</span>
                                     <span className="font-mono text-white">${crypto.price.toFixed(2)}</span>
                                 </div>
@@ -347,13 +594,24 @@ const Dashboard: React.FC<DashboardProps> = ({ assets, cryptoCurrencies, setCryp
                         </div>
                     </Card>
                 </div>
+                            ))
+                        ) : (
+                            <p className="py-4 text-center text-sm text-gray-500">No favorites added yet.</p>
+                        )}
+                    </div>
+                </Card>
             </div>
+        </div>
 
             {/* Analytics Row */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <AssetAllocationChart data={allocationData} />
                 <AssetDistribution assets={assets} categories={assetCategories} />
             </div>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <AssetAllocationChart data={allocationData} />
+            <AssetDistribution assets={assets} categories={assetCategories} />
+        </div>
 
             {/* Market Analysis Row */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -364,15 +622,28 @@ const Dashboard: React.FC<DashboardProps> = ({ assets, cryptoCurrencies, setCryp
                     cryptoCurrencies={cryptoCurrencies} 
                     cryptoAllocation={portfolioMetrics.cryptoAllocation} 
                 />
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+            <div className="lg:col-span-2">
+                <TopPerformersChart data={topPerformersData} />
             </div>
 
             {/* Crypto Market Heatmap */}
             <CryptoMarketHeatmap 
                 cryptoCurrencies={cryptoCurrencies} 
                 onToggleFavorite={handleToggleFavorite} 
+            <RiskAnalysis
+                cryptoCurrencies={cryptoCurrencies}
+                cryptoAllocation={portfolioMetrics.cryptoAllocation}
             />
         </div>
     );
+
+        <CryptoMarketHeatmap
+            cryptoCurrencies={cryptoCurrencies}
+            onToggleFavorite={handleToggleFavorite}
+        />
+    </div>
+);
 };
 
 export default Dashboard;
