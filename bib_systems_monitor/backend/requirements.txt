@@ -1,7 +1,0 @@
-Flask
-Flask-SocketIO
-Flask-Cors
-psutil
-psycopg[binary]
-python-dotenv
-eventlet
