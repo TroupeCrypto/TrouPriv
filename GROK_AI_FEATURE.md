@@ -37,6 +37,10 @@ The main Chat page now supports uploading and analyzing:
 ## Setup
 
 ### API Key Configuration
+
+You have two options to configure your Grok API key:
+
+#### Option 1: Environment Variable (Recommended for development)
 Add your Grok API key to the `.env` file:
 ```
 VITE_GROK_AI=xai-your-api-key-here
@@ -44,11 +48,24 @@ VITE_GROK_AI=xai-your-api-key-here
 
 Or set it as an environment variable in your hosting platform.
 
+#### Option 2: Vault Storage (Secure, encrypted storage)
+1. Navigate to the **Vault** page in the application
+2. If not already set up, create a master password for your vault
+3. Click "Add New Item"
+4. Fill in the form:
+   - **Type**: Select "API Key"
+   - **Name**: Enter "Grok API Key" or "xAI API" (must contain "grok", "xai", or "x.ai")
+   - **Key/Secret**: Paste your Grok API key
+   - **Website** (optional): "https://x.ai"
+5. Click "Add to Vault"
+
+The Grok service will automatically detect and use your API key from the vault when the vault is unlocked. Environment variables take precedence over vault storage.
+
 ### Getting a Grok API Key
 1. Visit [x.ai](https://x.ai) (xAI's platform)
 2. Sign up for API access
 3. Generate your API key
-4. Add it to your environment variables
+4. Add it to either your environment variables or vault (see above)
 
 ## Usage Examples
 
