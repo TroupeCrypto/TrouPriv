@@ -7,7 +7,6 @@ import { encrypt } from '../utils/encryption';
 // FIX: Use relative paths for local modules
 import { VaultIcon, KeyIcon, FileTextIcon, EyeIcon, EyeOffIcon, CopyIcon, TrashIcon, GlobeIcon } from '../components/icons/Icons';
 import ConfirmationDialog from '../components/ConfirmationDialog';
-import BatchImportModal from '../components/BatchImportModal';
 import { useVault, DecryptedVaultItem } from '../contexts/VaultContext';
 import { useMasterPassword } from '../contexts/MasterPasswordContext';
 
@@ -104,7 +103,6 @@ const VaultPage: React.FC<VaultPageProps> = ({ vaultItems, setVaultItems }) => {
     const [visibility, setVisibility] = useState<Record<string, boolean>>({});
     const [copied, setCopied] = useState<string | null>(null);
     const [itemToDelete, setItemToDelete] = useState<VaultItem | null>(null);
-    const [showBatchImport, setShowBatchImport] = useState(false);
 
     const handleUnlock = useCallback(async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -123,12 +121,6 @@ const VaultPage: React.FC<VaultPageProps> = ({ vaultItems, setVaultItems }) => {
         clearPassword();
         setVisibility({});
         setShowNewItemForm(false);
-        setShowBatchImport(false);
-    };
-    
-    const handleBatchImport = (newItems: VaultItem[]) => {
-        setVaultItems(prev => [...prev, ...newItems]);
-        setShowBatchImport(false);
     };
     
     const handleAddItem = async (e: React.FormEvent) => {
@@ -263,9 +255,6 @@ const VaultPage: React.FC<VaultPageProps> = ({ vaultItems, setVaultItems }) => {
                     <button onClick={() => setShowNewItemForm(true)} className="bg-fuchsia-500/80 hover:bg-fuchsia-500 text-white font-bold py-2 px-4 rounded-md transition-colors text-sm">
                         + Add New Item
                     </button>
-                    <button onClick={() => setShowBatchImport(true)} className="bg-cyan-500/80 hover:bg-cyan-500 text-white font-bold py-2 px-4 rounded-md transition-colors text-sm">
-                        📋 Batch Import
-                    </button>
                     <button onClick={handleLock} className="bg-gray-600/50 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-md transition-colors text-sm">
                         Lock Vault
                     </button>
@@ -313,13 +302,6 @@ const VaultPage: React.FC<VaultPageProps> = ({ vaultItems, setVaultItems }) => {
                     </div>
                 </div>
             )}
-
-            <BatchImportModal
-                isOpen={showBatchImport}
-                onClose={() => setShowBatchImport(false)}
-                onImport={handleBatchImport}
-                masterPassword={masterPassword || ''}
-            />
 
             {decryptionError && <p className="text-yellow-400 bg-yellow-900/30 p-3 rounded-md text-sm">{decryptionError}</p>}
             
