@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { sendDesignerMessage, hasGrokApiKey, GrokMessage } from '../services/grokService';
 import { SpinnerIcon, XIcon } from './icons/Icons';
+import { useVault } from '../contexts/VaultContext';
 
 interface GrokMiniChatProps {
   className?: string;
@@ -20,7 +21,8 @@ const GrokMiniChat: React.FC<GrokMiniChatProps> = ({ className = '' }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const hasApiKey = hasGrokApiKey();
+  const { decryptedItems } = useVault();
+  const hasApiKey = hasGrokApiKey(decryptedItems);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -55,7 +57,7 @@ const GrokMiniChat: React.FC<GrokMiniChatProps> = ({ className = '' }) => {
         content: msg.content,
       }));
 
-      const response = await sendDesignerMessage(userMessage, conversationHistory);
+      const response = await sendDesignerMessage(userMessage, conversationHistory, decryptedItems);
       setMessages(prev => [...prev, { role: 'assistant', content: response }]);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to get response from Grok';
