@@ -13,7 +13,7 @@ import {
 
 // Initialize Stripe with API version
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-06-20',
+  apiVersion: '2023-10-16',
 });
 
 const router = Router();
@@ -21,7 +21,7 @@ const router = Router();
 /**
  * GET /config - Returns Stripe publishable key
  */
-router.get('/config', (req: Request, res: Response) => {
+router.get('/config', (_req: Request, res: Response) => {
   res.json({
     publishableKey: process.env.STRIPE_PUBLISHABLE_KEY,
   });
@@ -31,15 +31,16 @@ router.get('/config', (req: Request, res: Response) => {
  * POST /create-payment-intent
  * Creates a PaymentIntent with dynamic cart pricing
  */
-router.post('/create-payment-intent', async (req: Request, res: Response) => {
+router.post('/create-payment-intent', async (req: Request, res: Response): Promise<void> => {
   try {
     const body = req.body as CreatePaymentIntentBody;
 
     // Validate request
     if (!body.cart || !Array.isArray(body.cart) || body.cart.length === 0) {
-      return res.status(400).json({
+      res.status(400).json({
         error: 'Cart is required and must be a non-empty array',
       });
+      return;
     }
 
     // Compute total from catalog
@@ -103,21 +104,23 @@ router.post('/create-payment-intent', async (req: Request, res: Response) => {
  * POST /update-payment-intent
  * Updates a PaymentIntent with new cart pricing before confirmation
  */
-router.post('/update-payment-intent', async (req: Request, res: Response) => {
+router.post('/update-payment-intent', async (req: Request, res: Response): Promise<void> => {
   try {
     const body = req.body as UpdatePaymentIntentBody;
 
     // Validate request
     if (!body.paymentIntentId) {
-      return res.status(400).json({
+      res.status(400).json({
         error: 'paymentIntentId is required',
       });
+      return;
     }
 
     if (!body.cart || !Array.isArray(body.cart) || body.cart.length === 0) {
-      return res.status(400).json({
+      res.status(400).json({
         error: 'Cart is required and must be a non-empty array',
       });
+      return;
     }
 
     // Compute new total from catalog

@@ -7,7 +7,7 @@ import Stripe from 'stripe';
 
 // Initialize Stripe with API version
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-06-20',
+  apiVersion: '2023-10-16',
 });
 
 const router = Router();
@@ -20,12 +20,13 @@ const router = Router();
 router.post(
   '/webhook',
   bodyParser.raw({ type: 'application/json' }),
-  async (req: Request, res: Response) => {
+  async (req: Request, res: Response): Promise<void> => {
     const sig = req.headers['stripe-signature'];
 
     if (!sig) {
       console.error('Missing Stripe signature header');
-      return res.status(400).send('Missing signature');
+      res.status(400).send('Missing signature');
+      return;
     }
 
     let event: Stripe.Event;
@@ -39,7 +40,8 @@ router.post(
       );
     } catch (err: any) {
       console.error('Webhook signature verification failed:', err.message);
-      return res.status(400).send(`Webhook Error: ${err.message}`);
+      res.status(400).send(`Webhook Error: ${err.message}`);
+      return;
     }
 
     // Handle the event
