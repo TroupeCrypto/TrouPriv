@@ -9,6 +9,7 @@ interface EnvConfig {
   GEMINI_API_KEY: string | undefined;
   OPENAI_API_KEY: string | undefined;
   ANTHROPIC_API_KEY: string | undefined;
+  GROK_AI_KEY: string | undefined;
 }
 
 /**
@@ -39,18 +40,20 @@ export function getApiKeys(): EnvConfig {
     GEMINI_API_KEY: getEnvVar('VITE_GEMINI_API_KEY') || getEnvVar('API_KEY') || getEnvVar('GEMINI_API_KEY'),
     OPENAI_API_KEY: getEnvVar('VITE_OPENAI_API_KEY') || getEnvVar('OPENAI_API_KEY'),
     ANTHROPIC_API_KEY: getEnvVar('VITE_ANTHROPIC_API_KEY') || getEnvVar('ANTHROPIC_API_KEY'),
+    GROK_AI_KEY: getEnvVar('VITE_GROK_AI') || getEnvVar('GROK_AI'),
   };
 }
 
 /**
  * Check if an API key is configured
  */
-export function hasApiKey(provider: 'gemini' | 'openai' | 'anthropic'): boolean {
+export function hasApiKey(provider: 'gemini' | 'openai' | 'anthropic' | 'grok'): boolean {
   const keys = getApiKeys();
   const keyMap = {
     gemini: keys.GEMINI_API_KEY,
     openai: keys.OPENAI_API_KEY,
     anthropic: keys.ANTHROPIC_API_KEY,
+    grok: keys.GROK_AI_KEY,
   };
   
   return !!keyMap[provider];
@@ -59,12 +62,13 @@ export function hasApiKey(provider: 'gemini' | 'openai' | 'anthropic'): boolean 
 /**
  * Get API key for a specific provider
  */
-export function getApiKey(provider: 'gemini' | 'openai' | 'anthropic'): string | undefined {
+export function getApiKey(provider: 'gemini' | 'openai' | 'anthropic' | 'grok'): string | undefined {
   const keys = getApiKeys();
   const keyMap = {
     gemini: keys.GEMINI_API_KEY,
     openai: keys.OPENAI_API_KEY,
     anthropic: keys.ANTHROPIC_API_KEY,
+    grok: keys.GROK_AI_KEY,
   };
   
   return keyMap[provider];
@@ -84,6 +88,7 @@ export function logEnvStatus(): void {
   console.log('Gemini API Key:', keys.GEMINI_API_KEY ? '✅ Loaded' : '❌ Not Found');
   console.log('OpenAI API Key:', keys.OPENAI_API_KEY ? '✅ Loaded' : '❌ Not Found');
   console.log('Anthropic API Key:', keys.ANTHROPIC_API_KEY ? '✅ Loaded' : '❌ Not Found');
+  console.log('Grok AI API Key:', keys.GROK_AI_KEY ? '✅ Loaded' : '❌ Not Found');
   
   console.log('\nEnvironment Mode:', import.meta.env.MODE);
   console.log('DEV Mode:', import.meta.env.DEV);
@@ -120,7 +125,7 @@ export function logEnvStatus(): void {
  * Validate that required API keys are present
  * Returns an array of missing keys
  */
-export function validateRequiredKeys(requiredProviders: Array<'gemini' | 'openai' | 'anthropic'>): string[] {
+export function validateRequiredKeys(requiredProviders: Array<'gemini' | 'openai' | 'anthropic' | 'grok'>): string[] {
   const missing: string[] = [];
   const keys = getApiKeys();
   
@@ -131,6 +136,8 @@ export function validateRequiredKeys(requiredProviders: Array<'gemini' | 'openai
       missing.push('VITE_OPENAI_API_KEY');
     } else if (provider === 'anthropic' && !keys.ANTHROPIC_API_KEY) {
       missing.push('VITE_ANTHROPIC_API_KEY');
+    } else if (provider === 'grok' && !keys.GROK_AI_KEY) {
+      missing.push('VITE_GROK_AI');
     }
   });
   

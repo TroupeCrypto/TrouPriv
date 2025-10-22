@@ -33,6 +33,7 @@ import LearningPage from './pages/LearningPage';
 import ProtocolsPage from './pages/ProtocolsPage';
 import BusinessMeetingPage from './pages/BusinessMeetingPage';
 import ChatPage from './pages/ChatPage';
+import GrokMiniChat from './components/GrokMiniChat';
 import { logEnvStatus, initializeEnvValidation } from './utils/env';
 
 // Initialize and validate environment variables on app load
@@ -335,6 +336,8 @@ const App: React.FC = () => {
                         </main>
                     </div>
                 </div>
+                {/* Persistent Grok AI Designer Chat - Available on all pages */}
+                <GrokMiniChat />
             </div>
         </VaultProvider>
     </MasterPasswordProvider>

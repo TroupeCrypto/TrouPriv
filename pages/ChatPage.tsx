@@ -33,6 +33,15 @@ const fileToBase64 = (file: File): Promise<string> => {
     });
 };
 
+// Helper function to detect if a file is a text-based code file
+const isCodeFile = (file: File): boolean => {
+    const codeExtensions = ['.md', '.tsx', '.ts', '.js', '.jsx', '.py', '.css', '.html', '.json', '.xml', '.txt', '.csv', '.java', '.cpp', '.c', '.h', '.rs', '.go', '.rb', '.php', '.sh', '.yml', '.yaml'];
+    return codeExtensions.some(ext => file.name.toLowerCase().endsWith(ext)) || 
+           file.type.startsWith('text/') || 
+           file.type === 'application/json' ||
+           file.type === 'application/xml';
+};
+
 
 const ChatPage: React.FC<ChatPageProps> = ({ chatHistory, setChatHistory, aiPersona, aiProtocols, vaultItems }) => {
     const [input, setInput] = useState('');
@@ -171,10 +180,11 @@ const ChatPage: React.FC<ChatPageProps> = ({ chatHistory, setChatHistory, aiPers
                 // Check if all files are supported types
                 for (const file of files) {
                     if (!file.type.startsWith('image/') && 
-                        !file.type.startsWith('text/') && 
+                        !isCodeFile(file) &&
                         !file.type.startsWith('application/zip') &&
-                        !file.type.startsWith('application/x-zip-compressed')) {
-                        throw new Error(`Gemini can currently only process image files (e.g., .png, .jpg), text files (e.g., .txt, .md), and zip files (.zip) in this chat. Unsupported file type: ${file.type}`);
+                        !file.type.startsWith('application/x-zip-compressed') &&
+                        !file.type.startsWith('application/pdf')) {
+                        throw new Error(`Gemini can currently only process image files, text/code files (e.g., .md, .tsx, .ts, .py, .css), zip files, and PDFs. Unsupported file type: ${file.type} for ${file.name}`);
                     }
                 }
 
