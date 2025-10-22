@@ -229,7 +229,18 @@ const ChatPage: React.FC<ChatPageProps> = ({ chatHistory, setChatHistory, aiPers
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKeys.openai}` },
                     body: JSON.stringify({ model: 'gpt-4o', messages: [{ role: 'system', content: systemPrompt }, ...messagesForApi, { role: 'user', content: userPrompt }] })
                 });
-                if (!openaiRes.ok) { const e = await openaiRes.json(); throw new Error(`OpenAI: ${e.error.message}`); }
+                if (!openaiRes.ok) {
+                    let errorMessage = `OpenAI API error (${openaiRes.status} ${openaiRes.statusText})`;
+                    try {
+                        const errorData = await openaiRes.json();
+                        if (errorData?.error?.message) {
+                            errorMessage = `OpenAI: ${errorData.error.message}`;
+                        }
+                    } catch (parseError) {
+                        // Failed to parse error response, use status text
+                    }
+                    throw new Error(errorMessage);
+                }
                 const openaiData = await openaiRes.json();
                 return openaiData.choices[0].message.content;
             }
@@ -246,7 +257,18 @@ const ChatPage: React.FC<ChatPageProps> = ({ chatHistory, setChatHistory, aiPers
                     headers: { 'Content-Type': 'application/json', 'x-api-key': apiKeys.anthropic, 'anthropic-version': '2023-06-01' },
                     body: JSON.stringify({ model: 'claude-3-opus-20240229', max_tokens: 4096, system: systemPrompt, messages: [...messagesForApi, { role: 'user', content: userPrompt }] })
                 });
-                if (!anthropicRes.ok) { const e = await anthropicRes.json(); throw new Error(`Anthropic: ${e.error.message}`); }
+                if (!anthropicRes.ok) {
+                    let errorMessage = `Anthropic API error (${anthropicRes.status} ${anthropicRes.statusText})`;
+                    try {
+                        const errorData = await anthropicRes.json();
+                        if (errorData?.error?.message) {
+                            errorMessage = `Anthropic: ${errorData.error.message}`;
+                        }
+                    } catch (parseError) {
+                        // Failed to parse error response, use status text
+                    }
+                    throw new Error(errorMessage);
+                }
                 const anthropicData = await anthropicRes.json();
                 return anthropicData.content[0].text;
             }
