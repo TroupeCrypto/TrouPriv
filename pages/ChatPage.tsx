@@ -174,7 +174,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ chatHistory, setChatHistory, aiPers
                         !file.type.startsWith('text/') && 
                         !file.type.startsWith('application/zip') &&
                         !file.type.startsWith('application/x-zip-compressed')) {
-                        throw new Error(`Gemini can currently only process image, text, and zip files in this chat. Unsupported file type: ${file.type}`);
+                        throw new Error(`Gemini can currently only process image files (e.g., .png, .jpg), text files (e.g., .txt, .md), and zip files (.zip) in this chat. Unsupported file type: ${file.type}`);
                     }
                 }
 
