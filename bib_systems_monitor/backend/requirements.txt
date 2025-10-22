@@ -1,3 +1,7 @@
-Flask==3.0.0
-Flask-CORS==6.0.0
-python-dotenv==1.0.0
+Flask
+Flask-SocketIO
+Flask-Cors
+psutil
+psycopg[binary]
+python-dotenv
+eventlet
