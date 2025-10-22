@@ -37,8 +37,8 @@ const fileToBase64 = (file: File): Promise<string> => {
 const ChatPage: React.FC<ChatPageProps> = ({ chatHistory, setChatHistory, aiPersona, aiProtocols, vaultItems }) => {
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    const [fileToUpload, setFileToUpload] = useState<File | null>(null);
-    const [filePreviewUrl, setFilePreviewUrl] = useState<string | null>(null);
+    const [filesToUpload, setFilesToUpload] = useState<File[]>([]);
+    const [filePreviewUrls, setFilePreviewUrls] = useState<string[]>([]);
     
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -94,22 +94,27 @@ const ChatPage: React.FC<ChatPageProps> = ({ chatHistory, setChatHistory, aiPers
         }
     }, [input]);
 
-    // Create a preview URL for image files
+    // Create preview URLs for image files
     useEffect(() => {
-        let objectUrl: string | null = null;
-        if (fileToUpload && fileToUpload.type.startsWith('image/')) {
-            objectUrl = URL.createObjectURL(fileToUpload);
-            setFilePreviewUrl(objectUrl);
-        } else {
-            setFilePreviewUrl(null);
-        }
+        const objectUrls: string[] = [];
+        const previews: string[] = [];
+        
+        filesToUpload.forEach((file) => {
+            if (file.type.startsWith('image/')) {
+                const objectUrl = URL.createObjectURL(file);
+                objectUrls.push(objectUrl);
+                previews.push(objectUrl);
+            } else {
+                previews.push('');
+            }
+        });
+        
+        setFilePreviewUrls(previews);
 
         return () => {
-            if (objectUrl) {
-                URL.revokeObjectURL(objectUrl);
-            }
+            objectUrls.forEach(url => URL.revokeObjectURL(url));
         };
-    }, [fileToUpload]);
+    }, [filesToUpload]);
     
     const handleUnlock = useCallback(async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -124,7 +129,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ chatHistory, setChatHistory, aiPers
     }, [verifyAndSetPassword]);
 
     const routePrompt = useCallback(async (userPrompt: string): Promise<'Gemini' | 'OpenAI' | 'Anthropic'> => {
-        if (fileToUpload) {
+        if (filesToUpload.length > 0) {
             return 'Gemini'; // Force Gemini for multimodal input for now
         }
         const apiKey = getGeminiApiKeyOrThrow();
@@ -152,9 +157,9 @@ const ChatPage: React.FC<ChatPageProps> = ({ chatHistory, setChatHistory, aiPers
             console.error("Routing failed, defaulting to Gemini:", error);
             return 'Gemini';
         }
-    }, [apiKeys.openai, apiKeys.anthropic, fileToUpload]);
+    }, [apiKeys.openai, apiKeys.anthropic, filesToUpload]);
 
-    const getAiResponse = useCallback(async (userPrompt: string, model: 'Gemini' | 'OpenAI' | 'Anthropic', currentHistory: ChatMessage[], file: File | null): Promise<string> => {
+    const getAiResponse = useCallback(async (userPrompt: string, model: 'Gemini' | 'OpenAI' | 'Anthropic', currentHistory: ChatMessage[], files: File[]): Promise<string> => {
         const activeProtocols = aiProtocols.filter(p => p.isActive).map(p => `- ${p.content}`).join('\n');
         
         const systemPrompt = `You are ${aiPersona.name}. Your Core Persona: ${aiPersona.corePersona}. Strictly adhere to the following active protocols:\n${activeProtocols || 'No active protocols.'}`;
@@ -163,8 +168,14 @@ const ChatPage: React.FC<ChatPageProps> = ({ chatHistory, setChatHistory, aiPers
 
         switch(model) {
             case 'Gemini': {
-                if (file && !file.type.startsWith('image/') && !file.type.startsWith('text/')) {
-                    throw new Error("Gemini can currently only process image and text files in this chat.");
+                // Check if all files are supported types
+                for (const file of files) {
+                    if (!file.type.startsWith('image/') && 
+                        !file.type.startsWith('text/') && 
+                        !file.type.startsWith('application/zip') &&
+                        !file.type.startsWith('application/x-zip-compressed')) {
+                        throw new Error(`Gemini can currently only process image files (e.g., .png, .jpg), text files (e.g., .txt, .md), and zip files (.zip) in this chat. Unsupported file type: ${file.type}`);
+                    }
                 }
 
                 const apiKey = getGeminiApiKeyOrThrow();
@@ -178,7 +189,9 @@ const ChatPage: React.FC<ChatPageProps> = ({ chatHistory, setChatHistory, aiPers
                 ];
                 
                 const userParts: any[] = [{ text: userPrompt }];
-                if (file) {
+                
+                // Add all files to the parts
+                for (const file of files) {
                     const base64Data = await fileToBase64(file);
                     userParts.push({ inlineData: { mimeType: file.type, data: base64Data } });
                 }
@@ -194,7 +207,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ chatHistory, setChatHistory, aiPers
             }
             
             case 'OpenAI': {
-                if (file) throw new Error("File uploads are currently only supported with the Gemini model.");
+                if (files.length > 0) throw new Error("File uploads are currently only supported with the Gemini model.");
                 if (!apiKeys.openai) throw new Error("OpenAI API Key is missing from the vault.");
                 const messagesForApi = recentHistory.map(({ role, content }) => ({
                     role: role === 'model' ? 'assistant' : 'user',
@@ -212,7 +225,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ chatHistory, setChatHistory, aiPers
             }
 
             case 'Anthropic': {
-                if (file) throw new Error("File uploads are currently only supported with the Gemini model.");
+                if (files.length > 0) throw new Error("File uploads are currently only supported with the Gemini model.");
                 if (!apiKeys.anthropic) throw new Error("Anthropic API Key is missing from the vault.");
                 const messagesForApi = recentHistory.map(({ role, content }) => ({
                     role: role === 'model' ? 'assistant' : 'user',
@@ -271,14 +284,14 @@ const ChatPage: React.FC<ChatPageProps> = ({ chatHistory, setChatHistory, aiPers
     };
     
     const handleSend = async () => {
-        if (isLoading || (!input.trim() && !fileToUpload)) return;
+        if (isLoading || (!input.trim() && filesToUpload.length === 0)) return;
     
         const currentInput = input;
-        const currentFile = fileToUpload;
+        const currentFiles = [...filesToUpload];
         
         setIsLoading(true);
         setInput('');
-        setFileToUpload(null);
+        setFilesToUpload([]);
 
         const isImageCommand = /^(generate|create|make) an? (image|picture|artwork)|^\/imagine/i.test(currentInput);
         if (isImageCommand) {
@@ -288,8 +301,9 @@ const ChatPage: React.FC<ChatPageProps> = ({ chatHistory, setChatHistory, aiPers
         }
 
         let userMessageContent = currentInput;
-        if (currentFile) {
-            userMessageContent = `[File attached: ${currentFile.name}]\n\n${currentInput}`;
+        if (currentFiles.length > 0) {
+            const fileNames = currentFiles.map(f => f.name).join(', ');
+            userMessageContent = `[Files attached: ${fileNames}]\n\n${currentInput}`;
         }
         const userMessage: ChatMessage = { role: 'user', content: userMessageContent };
         const newHistory = [...chatHistory, userMessage];
@@ -299,7 +313,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ chatHistory, setChatHistory, aiPers
             const model = await routePrompt(currentInput);
             setChatHistory(prev => [...prev, { role: 'model', content: '...', model: model }]);
             
-            const responseContent = await getAiResponse(currentInput, model, newHistory, currentFile);
+            const responseContent = await getAiResponse(currentInput, model, newHistory, currentFiles);
             const modelMessage: ChatMessage = { role: 'model', content: responseContent, model };
             
             setChatHistory(prev => [...newHistory, modelMessage]);
@@ -394,30 +408,34 @@ const ChatPage: React.FC<ChatPageProps> = ({ chatHistory, setChatHistory, aiPers
 
             {/* Input Area */}
             <div className="p-4 border-t border-white/10">
-                {fileToUpload && (
-                    <div className="mb-2 p-2 bg-gray-800/50 rounded-md flex items-center justify-between animate-fade-in-fast">
+                {filesToUpload.length > 0 && (
+                    <div className="mb-2 space-y-2 max-h-48 overflow-y-auto">
                         <style>{`
                             @keyframes fade-in-fast { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
                             .animate-fade-in-fast { animation: fade-in-fast 0.2s ease-out; }
                         `}</style>
-                        <div className="flex items-center gap-2 overflow-hidden">
-                            {filePreviewUrl ? (
-                                <img src={filePreviewUrl} alt="Preview" className="w-10 h-10 object-cover rounded" />
-                            ) : (
-                                <FileTextIcon className="w-8 h-8 text-gray-400 flex-shrink-0" />
-                            )}
-                            <div className="overflow-hidden">
-                                <p className="text-sm text-gray-300 truncate">{fileToUpload.name}</p>
-                                <p className="text-xs text-gray-500">{Math.round(fileToUpload.size / 1024)} KB</p>
+                        {filesToUpload.map((file, index) => (
+                            <div key={index} className="p-2 bg-gray-800/50 rounded-md flex items-center justify-between animate-fade-in-fast">
+                                <div className="flex items-center gap-2 overflow-hidden">
+                                    {filePreviewUrls[index] ? (
+                                        <img src={filePreviewUrls[index]} alt="Preview" className="w-10 h-10 object-cover rounded" />
+                                    ) : (
+                                        <FileTextIcon className="w-8 h-8 text-gray-400 flex-shrink-0" />
+                                    )}
+                                    <div className="overflow-hidden">
+                                        <p className="text-sm text-gray-300 truncate">{file.name}</p>
+                                        <p className="text-xs text-gray-500">{Math.round(file.size / 1024)} KB</p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => setFilesToUpload(files => files.filter((_, i) => i !== index))}
+                                    className="p-1 rounded-full text-gray-400 hover:bg-gray-700 hover:text-white flex-shrink-0"
+                                    aria-label="Remove file"
+                                >
+                                    <XIcon className="w-4 h-4" />
+                                </button>
                             </div>
-                        </div>
-                        <button
-                            onClick={() => setFileToUpload(null)}
-                            className="p-1 rounded-full text-gray-400 hover:bg-gray-700 hover:text-white flex-shrink-0"
-                            aria-label="Remove file"
-                        >
-                            <XIcon className="w-4 h-4" />
-                        </button>
+                        ))}
                     </div>
                 )}
                 <div className="relative flex items-center">
@@ -431,7 +449,19 @@ const ChatPage: React.FC<ChatPageProps> = ({ chatHistory, setChatHistory, aiPers
                     <input 
                         type="file" 
                         ref={fileInputRef} 
-                        onChange={(e) => setFileToUpload(e.target.files ? e.target.files[0] : null)}
+                        onChange={(e) => {
+                            if (e.target.files) {
+                                const newFiles = Array.from(e.target.files);
+                                const totalFiles = filesToUpload.length + newFiles.length;
+                                if (totalFiles > 50) {
+                                    alert(`You can only upload up to 50 files at once. You currently have ${filesToUpload.length} files selected.`);
+                                    return;
+                                }
+                                setFilesToUpload(prev => [...prev, ...newFiles]);
+                            }
+                        }}
+                        multiple
+                        accept="image/*,text/*,.txt,.md,.csv,.json,.xml,.html,.css,.js,.ts,.tsx,.jsx,.py,.java,.cpp,.c,.h,.zip,.pdf"
                         className="hidden"
                     />
                     <textarea
@@ -446,7 +476,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ chatHistory, setChatHistory, aiPers
                     />
                     <button
                         onClick={handleSend}
-                        disabled={isLoading || (!input.trim() && !fileToUpload)}
+                        disabled={isLoading || (!input.trim() && filesToUpload.length === 0)}
                         className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-white bg-fuchsia-600 rounded-full disabled:bg-gray-600 hover:bg-fuchsia-500 transition-colors"
                         aria-label="Send message"
                     >
