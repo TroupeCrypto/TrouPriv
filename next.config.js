@@ -2,15 +2,8 @@
 const nextConfig = {
   reactStrictMode: true,
   transpilePackages: ['@google/genai'],
-  webpack: (config) => {
-    config.resolve.fallback = {
-      ...config.resolve.fallback,
-      fs: false,
-      net: false,
-      tls: false,
-      crypto: false,
-    };
-    return config;
+  turbopack: {
+    // Turbopack configuration
   },
   env: {
     GEMINI_API_KEY: process.env.VITE_GEMINI_API_KEY || '',
