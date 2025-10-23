@@ -1,5 +1,3 @@
-
-
 // FIX: Corrected the import statement for React hooks.
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import * as ethers from 'ethers';
@@ -42,27 +40,185 @@ initializeEnvValidation();
 
 // Defines a clean, empty initial state for the application.
 const initialState: Omit<AppData, 'schemaVersion'> = {
+  assets: [],
+  cryptoCurrencies: [],
+  alerts: [],
+  profile: { name: '', bio: '', website: '', avatarUrl: '' },
+  settings: { defaultCurrency: 'USD', notificationsEnabled: false },
+  socialAuth: [],
+  assetCategories: [],
+  positions: [],
+  web3Wallet: null,
+  deploymentTransactions: [],
+  aiPersona: {
+    name: 'BiB',
+    corePersona: '',
+    traits: {
+      ethics: [],
+      morals: [],
+      beliefs: [],
+      personality: [],
+      approach: [],
+      passions: [],
+      dreams: [],
+      dislikes: [],
+      plans: [],
+      knowledge: [],
+    },
+    internalThoughts: '',
+    realTimeLogic: '',
+  },
+  aiProtocols: [],
+  aiMemory: [],
+  chatHistory: [],
+};
 
-        const handleChainChanged = () => {
-            console.log('Wallet network changed.');
-            updateWalletState();
-        };
+const App: React.FC = () => {
+  const [page, setPage] = useState<Page>(Page.Dashboard);
+  const [appData, setAppData] = useState<Omit<AppData, 'schemaVersion'>>(initialState);
+  const [vaultItems, setVaultItems] = useState<VaultItem[]>([]);
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved');
+  const [backgroundIndex, setBackgroundIndex] = useState(0);
+  const [portfolioHistory, setPortfolioHistory] = useState<PortfolioHistoryPoint[]>([]);
 
-        if (window.ethereum?.on) {
-            window.ethereum.on('accountsChanged', handleAccountsChanged);
-            window.ethereum.on('chainChanged', handleChainChanged);
+  // Load all data from localStorage
+  const loadAllData = useCallback(() => {
+    const loaded = get<Omit<AppData, 'schemaVersion'>>('appData', initialState);
+    setAppData(loaded);
+    const loadedVault = get<VaultItem[]>('vaultItems', []);
+    setVaultItems(loadedVault);
+  }, []);
 
-            // Check for existing connection on app load
-            updateWalletState();
+  // Save app data
+  useEffect(() => {
+    if (saveStatus === 'saving') {
+      const success = set('appData', appData);
+      setSaveStatus(success ? 'saved' : 'error');
+    }
+  }, [saveStatus, appData]);
 
-            return () => {
-                if (window.ethereum.removeListener) {
-                    window.ethereum.removeListener('accountsChanged', handleAccountsChanged);
-                    window.ethereum.removeListener('chainChanged', handleChainChanged);
-                }
-            };
+  // Load data on mount
+  useEffect(() => {
+    loadAllData();
+  }, [loadAllData]);
+
+  // Trigger save when app data changes
+  useEffect(() => {
+    setSaveStatus('saving');
+  }, [appData]);
+
+  // Save vault items separately
+  useEffect(() => {
+    set('vaultItems', vaultItems);
+  }, [vaultItems]);
+
+  // Setter functions
+  const setAssets = useCallback((assets: Asset[] | ((prev: Asset[]) => Asset[])) => {
+    setAppData(prev => ({ ...prev, assets: typeof assets === 'function' ? assets(prev.assets) : assets }));
+  }, []);
+
+  const setCryptoCurrencies = useCallback((cryptos: CryptoCurrency[] | ((prev: CryptoCurrency[]) => CryptoCurrency[])) => {
+    setAppData(prev => ({ ...prev, cryptoCurrencies: typeof cryptos === 'function' ? cryptos(prev.cryptoCurrencies) : cryptos }));
+  }, []);
+
+  const setAlerts = useCallback((alerts: Alert[] | ((prev: Alert[]) => Alert[])) => {
+    setAppData(prev => ({ ...prev, alerts: typeof alerts === 'function' ? alerts(prev.alerts) : alerts }));
+  }, []);
+
+  const setProfile = useCallback((profile: Profile | ((prev: Profile) => Profile)) => {
+    setAppData(prev => ({ ...prev, profile: typeof profile === 'function' ? profile(prev.profile) : profile }));
+  }, []);
+
+  const setSettings = useCallback((settings: AppSettings | ((prev: AppSettings) => AppSettings)) => {
+    setAppData(prev => ({ ...prev, settings: typeof settings === 'function' ? settings(prev.settings) : settings }));
+  }, []);
+
+  const setSocialAuth = useCallback((auth: BrandAuthConfig[] | ((prev: BrandAuthConfig[]) => BrandAuthConfig[])) => {
+    setAppData(prev => ({ ...prev, socialAuth: typeof auth === 'function' ? auth(prev.socialAuth) : auth }));
+  }, []);
+
+  const setAssetCategories = useCallback((categories: AssetCategory[] | ((prev: AssetCategory[]) => AssetCategory[])) => {
+    setAppData(prev => ({ ...prev, assetCategories: typeof categories === 'function' ? categories(prev.assetCategories) : categories }));
+  }, []);
+
+  const setPositions = useCallback((positions: Position[] | ((prev: Position[]) => Position[])) => {
+    setAppData(prev => ({ ...prev, positions: typeof positions === 'function' ? positions(prev.positions) : positions }));
+  }, []);
+
+  const setWeb3Wallet = useCallback((wallet: Web3Wallet | null | ((prev: Web3Wallet | null) => Web3Wallet | null)) => {
+    setAppData(prev => ({ ...prev, web3Wallet: typeof wallet === 'function' ? wallet(prev.web3Wallet) : wallet }));
+  }, []);
+
+  const setDeploymentTransactions = useCallback((txs: DeploymentTransaction[] | ((prev: DeploymentTransaction[]) => DeploymentTransaction[])) => {
+    setAppData(prev => ({ ...prev, deploymentTransactions: typeof txs === 'function' ? txs(prev.deploymentTransactions) : txs }));
+  }, []);
+
+  const setAiPersona = useCallback((persona: AIPersona | ((prev: AIPersona) => AIPersona)) => {
+    setAppData(prev => ({ ...prev, aiPersona: typeof persona === 'function' ? persona(prev.aiPersona) : persona }));
+  }, []);
+
+  const setAiProtocols = useCallback((protocols: AIProtocol[] | ((prev: AIProtocol[]) => AIProtocol[])) => {
+    setAppData(prev => ({ ...prev, aiProtocols: typeof protocols === 'function' ? protocols(prev.aiProtocols) : protocols }));
+  }, []);
+
+  const setAiMemory = useCallback((memory: AIMemoryItem[] | ((prev: AIMemoryItem[]) => AIMemoryItem[])) => {
+    setAppData(prev => ({ ...prev, aiMemory: typeof memory === 'function' ? memory(prev.aiMemory) : memory }));
+  }, []);
+
+  const setChatHistory = useCallback((history: ChatMessage[] | ((prev: ChatMessage[]) => ChatMessage[])) => {
+    setAppData(prev => ({ ...prev, chatHistory: typeof history === 'function' ? history(prev.chatHistory) : history }));
+  }, []);
+
+  // Update wallet state
+  const updateWalletState = useCallback(async () => {
+    if (window.ethereum) {
+      try {
+        const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+        if (accounts.length > 0) {
+          const provider = new ethers.BrowserProvider(window.ethereum);
+          const balance = await provider.getBalance(accounts[0]);
+          const network = await provider.getNetwork();
+          setWeb3Wallet({
+            address: accounts[0],
+            balance: parseFloat(ethers.formatEther(balance)),
+            network: network.name,
+          });
+        } else {
+          setWeb3Wallet(null);
         }
-    }, [updateWalletState]);
+      } catch (error) {
+        console.error('Error updating wallet state:', error);
+      }
+    }
+  }, [setWeb3Wallet]);
+
+  // Listen for wallet changes
+  useEffect(() => {
+    const handleAccountsChanged = () => {
+      console.log('Wallet accounts changed.');
+      updateWalletState();
+    };
+
+    const handleChainChanged = () => {
+      console.log('Wallet network changed.');
+      updateWalletState();
+    };
+
+    if (window.ethereum?.on) {
+      window.ethereum.on('accountsChanged', handleAccountsChanged);
+      window.ethereum.on('chainChanged', handleChainChanged);
+
+      // Check for existing connection on app load
+      updateWalletState();
+
+      return () => {
+        if (window.ethereum.removeListener) {
+          window.ethereum.removeListener('accountsChanged', handleAccountsChanged);
+          window.ethereum.removeListener('chainChanged', handleChainChanged);
+        }
+      };
+    }
+  }, [updateWalletState]);
 
   const renderPage = () => {
     switch (page) {
