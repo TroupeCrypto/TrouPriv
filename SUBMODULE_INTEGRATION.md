@@ -106,8 +106,16 @@ git submodule add https://github.com/TroupeCrypto/TrouPriv.git TrouPriv
 ```
 
 ### Automated Script
+
+Option 1 - Download and run directly:
 ```bash
 # From within githubrepo1 repository
+curl -O https://raw.githubusercontent.com/TroupeCrypto/TrouPriv/main/add-to-githubrepo1.sh
+bash add-to-githubrepo1.sh
+```
+
+Option 2 - After submodule is added:
+```bash
 bash TrouPriv/add-to-githubrepo1.sh
 ```
 
