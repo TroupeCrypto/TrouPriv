@@ -64,9 +64,9 @@ git submodule update
 To update TrouPriv to the latest commit:
 
 ```bash
-cd TrouPriv
-git pull origin main
-cd ..
+git submodule update --remote TrouPriv
+
+# Then, commit the updated submodule reference
 git add TrouPriv
 git commit -m "Update TrouPriv submodule to latest version"
 git push origin main
