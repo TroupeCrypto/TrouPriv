@@ -32,11 +32,6 @@ fi
 echo "Adding TrouPriv submodule..."
 git submodule add https://github.com/TroupeCrypto/TrouPriv.git TrouPriv
 
-# Initialize and update the submodule
-echo "Initializing submodule..."
-git submodule init
-git submodule update
-
 # Stage the changes
 echo "Staging changes..."
 git add .gitmodules TrouPriv
