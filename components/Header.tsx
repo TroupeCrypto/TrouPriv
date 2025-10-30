@@ -109,7 +109,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage, setPage, saveStatus, accen
                 {/* Left Side: Logo & Main Nav */}
                 <div className="flex items-center gap-4">
                     <div className="flex items-center gap-2 flex-shrink-0">
-                        <BibIcon className="w-8 h-8" style={{ color: accent }} />
+                        <BibIcon className="w-8 h-8" />
                         <h1 className="hidden md:block text-2xl font-bold text-white tracking-tighter">TrouPrive</h1>
                     </div>
                     <nav className="flex items-center gap-1 bg-gray-800/50 p-1 rounded-md">
