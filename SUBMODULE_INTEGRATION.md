@@ -165,6 +165,7 @@ If you need to remove the submodule:
 git submodule deinit -f TrouPriv
 git rm -f TrouPriv
 rm -rf .git/modules/TrouPriv
+git commit -m "Remove TrouPriv submodule"
 ```
 
 ## Support
