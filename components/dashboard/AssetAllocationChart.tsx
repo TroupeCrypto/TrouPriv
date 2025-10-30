@@ -5,6 +5,7 @@ interface AllocationData {
     name: string;
     value: number;
     percentage: number;
+    [key: string]: string | number; // Index signature for recharts compatibility
 }
 
 interface AssetAllocationChartProps {
@@ -85,7 +86,10 @@ export const AssetAllocationChart: React.FC<AssetAllocationChartProps> = ({ data
                         cx="50%"
                         cy="50%"
                         labelLine={false}
-                        label={({ name, percentage }) => `${name}: ${percentage.toFixed(1)}%`}
+                        label={(props: any) => {
+                            const entry = data.find(d => d.name === props.name);
+                            return entry ? `${entry.name}: ${entry.percentage.toFixed(1)}%` : '';
+                        }}
                         outerRadius={100}
                         fill="#8884d8"
                         dataKey="value"

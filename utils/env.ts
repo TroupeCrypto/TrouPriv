@@ -16,16 +16,10 @@ interface EnvConfig {
 
 /**
  * Get environment variable value
- * Checks import.meta.env first (Vite's recommended way), then falls back to process.env
+ * For Next.js, use process.env
  */
 function getEnvVar(key: string): string | undefined {
-  // Try import.meta.env first (Vite's way)
-  if (typeof import.meta !== 'undefined' && import.meta.env) {
-    const value = import.meta.env[key];
-    if (value !== undefined) return value;
-  }
-  
-  // Fallback to process.env (for compatibility)
+  // Next.js uses process.env
   if (typeof process !== 'undefined' && process.env) {
     const value = process.env[key];
     if (value !== undefined) return value;
@@ -122,7 +116,7 @@ export function getApiKey(provider: 'gemini' | 'openai' | 'anthropic' | 'grok', 
  */
 export function logEnvStatus(): void {
   const keys = getApiKeys();
-  const isDev = import.meta.env.DEV;
+  const isDev = process.env.NODE_ENV === 'development';
   
   console.group('🔧 Environment Variables Status');
   
@@ -131,20 +125,9 @@ export function logEnvStatus(): void {
   console.log('Anthropic API Key:', keys.ANTHROPIC_API_KEY ? '✅ Loaded' : '❌ Not Found');
   console.log('Grok AI API Key:', keys.GROK_AI_KEY ? '✅ Loaded' : '❌ Not Found');
   
-  console.log('\nEnvironment Mode:', import.meta.env.MODE);
-  console.log('DEV Mode:', import.meta.env.DEV);
-  console.log('PROD Mode:', import.meta.env.PROD);
-  
-  // Show available VITE_ prefixed variables (only in development for security)
-  if (isDev && typeof import.meta !== 'undefined' && import.meta.env) {
-    const viteVars = Object.keys(import.meta.env).filter(key => key.startsWith('VITE_'));
-    console.log('\nAvailable VITE_ variables:', viteVars.length > 0 ? viteVars.join(', ') : 'None');
-  } else {
-    // In production, just show count for security
-    const hasViteVars = typeof import.meta !== 'undefined' && import.meta.env && 
-                       Object.keys(import.meta.env).some(key => key.startsWith('VITE_'));
-    console.log('\nVITE_ variables configured:', hasViteVars ? 'Yes' : 'No');
-  }
+  console.log('\nEnvironment Mode:', process.env.NODE_ENV);
+  console.log('DEV Mode:', isDev);
+  console.log('PROD Mode:', !isDev);
   
   // Add validation message
   const missingKeys = [];
