@@ -14,8 +14,8 @@ if ! git rev-parse --git-dir > /dev/null 2>&1; then
 fi
 
 # Check if working directory is clean
-if ! git diff-index --quiet HEAD --; then
-    echo "Error: Your working directory is not clean. Please commit or stash your changes first."
+if ! git diff-index --quiet HEAD -- || ! git rev-parse HEAD > /dev/null 2>&1; then
+    echo "Error: Your working directory is not clean, or you have not made an initial commit yet. Please commit or stash your changes first."
     exit 1
 fi
 
