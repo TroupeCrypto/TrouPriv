@@ -116,7 +116,6 @@ A convenience script is also provided: `add-to-githubrepo1.sh`
 
 ## Documentation
 
-- **[SUBMODULE_INTEGRATION.md](./SUBMODULE_INTEGRATION.md)** - Instructions for adding TrouPriv to githubrepo1
 - **[DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md)** - Comprehensive deployment guide with platform-specific instructions
 - **[ENV_CONFIG.md](./ENV_CONFIG.md)** - Detailed environment variable configuration guide
 - **[API_KEY_FIX_SUMMARY.md](./API_KEY_FIX_SUMMARY.md)** - Technical implementation details
