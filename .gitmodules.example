@@ -1,0 +1,14 @@
+# Example .gitmodules configuration for TroupeCrypto/githubrepo1
+# This file will be automatically created when adding TrouPriv as a submodule
+# 
+# To add TrouPriv as a submodule to githubrepo1, run from the githubrepo1 directory:
+#   git submodule add https://github.com/TroupeCrypto/TrouPriv.git TrouPriv
+#
+# Or download and use the convenience script:
+#   curl -O https://raw.githubusercontent.com/TroupeCrypto/TrouPriv/main/add-to-githubrepo1.sh
+#   bash add-to-githubrepo1.sh
+
+[submodule "TrouPriv"]
+	path = TrouPriv
+	url = https://github.com/TroupeCrypto/TrouPriv.git
+	branch = main
