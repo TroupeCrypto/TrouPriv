@@ -1,10 +1,10 @@
 # Adding TrouPriv to githubrepo1
 
-This document provides instructions for adding the TrouPriv project as a Git submodule to the `troupecrypto/githubrepo1` repository.
+This document provides instructions for adding the TrouPriv project as a Git submodule to the `TroupeCrypto/githubrepo1` repository.
 
 ## Prerequisites
 
-- Access to the `troupecrypto/githubrepo1` repository
+- Access to the `TroupeCrypto/githubrepo1` repository
 - Git installed on your local machine
 - Appropriate permissions to modify githubrepo1
 
@@ -93,6 +93,22 @@ The `.gitmodules` file in githubrepo1 will contain:
 [submodule "TrouPriv"]
 	path = TrouPriv
 	url = https://github.com/TroupeCrypto/TrouPriv.git
+	branch = main
+```
+
+See `.gitmodules.example` in this repository for a reference configuration.
+
+## Quick Reference
+
+### One-line Submodule Add
+```bash
+git submodule add https://github.com/TroupeCrypto/TrouPriv.git TrouPriv
+```
+
+### Automated Script
+```bash
+# From within githubrepo1 repository
+bash TrouPriv/add-to-githubrepo1.sh
 ```
 
 ## About TrouPriv
