@@ -22,8 +22,12 @@ if [ -f ".gitmodules" ] && grep -q "TrouPriv" .gitmodules; then
         echo "Updating TrouPriv submodule..."
         git submodule update --remote TrouPriv
         git add TrouPriv
-        git commit -m "Update TrouPriv submodule"
-        echo "TrouPriv submodule updated successfully!"
+        if git diff-index --quiet --cached HEAD --; then
+            echo "TrouPriv submodule is already up-to-date."
+        else
+            git commit -m "Update TrouPriv submodule"
+            echo "TrouPriv submodule updated successfully!"
+        fi
     fi
     exit 0
 fi
