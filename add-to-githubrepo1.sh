@@ -13,6 +13,12 @@ if ! git rev-parse --git-dir > /dev/null 2>&1; then
     exit 1
 fi
 
+# Check if working directory is clean
+if ! git diff-index --quiet HEAD -- || ! git rev-parse HEAD > /dev/null 2>&1; then
+    echo "Error: Your working directory is not clean, or you have not made an initial commit yet. Please commit or stash your changes first."
+    exit 1
+fi
+
 # Check if TrouPriv submodule already exists
 if [ -f ".gitmodules" ] && grep -q "TrouPriv" .gitmodules; then
     echo "TrouPriv submodule already exists in .gitmodules"
