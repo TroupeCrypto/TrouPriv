@@ -24,12 +24,12 @@ interface MasterPasswordContextType {
 
 const MasterPasswordContext = createContext<MasterPasswordContextType | undefined>(undefined);
 
-const MASTER_PASSWORD_KEY = 'masterPassword';
+const SESSION_STORAGE_KEY = 'TROUPRIVE_vault_key';
 const VAULT_VERIFICATION_KEY = 'vaultVerification';
 const VERIFICATION_STRING = 'trouprive-vault-check';
 
 export const MasterPasswordProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const [masterPassword, setMasterPassword] = useState<string | null>(() => getData(MASTER_PASSWORD_KEY, null));
+    const [masterPassword, setMasterPassword] = useState<string | null>(() => sessionStorage.getItem(SESSION_STORAGE_KEY));
     const [isVaultConfigured, setIsVaultConfigured] = useState<boolean>(() => !!getData(VAULT_VERIFICATION_KEY, null));
     const [isSettingInitialPassword, setIsSettingInitialPassword] = useState(false);
     const [isVerifying, setIsVerifying] = useState(false);
@@ -39,7 +39,7 @@ export const MasterPasswordProvider: React.FC<{ children: React.ReactNode }> = (
 
     const clearPassword = useCallback(() => {
         setMasterPassword(null);
-        removeData(MASTER_PASSWORD_KEY);
+        sessionStorage.removeItem(SESSION_STORAGE_KEY);
     }, []);
     
     const setInitialMasterPassword = useCallback(async (password: string) => {
@@ -56,7 +56,7 @@ export const MasterPasswordProvider: React.FC<{ children: React.ReactNode }> = (
             }
             
             setMasterPassword(password);
-            saveData(MASTER_PASSWORD_KEY, password);
+            sessionStorage.setItem(SESSION_STORAGE_KEY, password);
             
             setIsVaultConfigured(true);
         } catch (e) {
@@ -93,7 +93,7 @@ export const MasterPasswordProvider: React.FC<{ children: React.ReactNode }> = (
                 throw new Error("Decrypted content does not match verification string.");
             }
             setMasterPassword(password);
-            saveData(MASTER_PASSWORD_KEY, password);
+            sessionStorage.setItem(SESSION_STORAGE_KEY, password);
             setIsVerifying(false);
             return true;
         } catch (e) {
@@ -127,9 +127,9 @@ export const MasterPasswordProvider: React.FC<{ children: React.ReactNode }> = (
         setVaultItems(reEncryptedItems); // This will trigger the useEffect in App.tsx to save it
         saveData(VAULT_VERIFICATION_KEY, newVerificationItem); // Save the new verification key
         
-        // 4. Update the active master password in the context and persistent storage
+        // 4. Update the active master password in the context and session storage
         setMasterPassword(newPassword);
-        saveData(MASTER_PASSWORD_KEY, newPassword);
+        sessionStorage.setItem(SESSION_STORAGE_KEY, newPassword);
 
     }, [setMasterPassword]);
 

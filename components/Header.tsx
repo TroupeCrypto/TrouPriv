@@ -14,43 +14,34 @@ interface HeaderProps {
     currentPage: Page;
     setPage: (page: Page) => void;
     saveStatus: SaveStatus;
-    accentColor?: string;
 }
 
-interface NavLinkProps {
+const NavLink: React.FC<{
     page: Page;
     label: string;
     currentPage: Page;
     setPage: (page: Page) => void;
     icon: React.ReactNode;
     breakpoint?: 'sm' | 'md' | 'lg' | 'xl';
-    accentColor: string;
-}
+}> = ({ page, label, currentPage, setPage, icon, breakpoint = 'lg' }) => (
+    <button
+        onClick={() => setPage(page)}
+        className={`flex items-center gap-2 px-3 py-2 text-sm font-semibold rounded-md transition-colors ${
+            currentPage === page
+                ? 'bg-cyan-500 text-white'
+                : 'text-gray-300 hover:bg-gray-700/50 hover:text-white'
+        }`}
+        aria-current={currentPage === page ? 'page' : undefined}
+        title={label}
+    >
+        {icon}
+        <span className={`hidden ${breakpoint}:inline`}>{label}</span>
+    </button>
+);
 
-const NavLink: React.FC<NavLinkProps> = ({ page, label, currentPage, setPage, icon, breakpoint = 'lg', accentColor }) => {
-    const isActive = currentPage === page;
-    return (
-        <button
-            onClick={() => setPage(page)}
-            className={`flex items-center gap-2 px-3 py-2 text-sm font-semibold rounded-md transition-all duration-200 ${
-                isActive
-                    ? 'text-gray-900 shadow-lg'
-                    : 'text-gray-300 hover:bg-gray-700/50 hover:text-white'
-            }`}
-            aria-current={isActive ? 'page' : undefined}
-            title={label}
-            style={isActive ? { backgroundColor: accentColor, boxShadow: `0 0 22px ${accentColor}55` } : undefined}
-        >
-            {icon}
-            <span className={`hidden ${breakpoint}:inline`}>{label}</span>
-        </button>
-    );
-};
-
-const Header: React.FC<HeaderProps> = ({ currentPage, setPage, saveStatus, accentColor }) => {
+const Header: React.FC<HeaderProps> = ({ currentPage, setPage, saveStatus }) => {
     const [isAiMenuOpen, setIsAiMenuOpen] = useState(false);
     const aiMenuRef = useRef<HTMLDivElement>(null);
-    const accent = accentColor ?? '#22d3ee';
 
     const getSaveStatusIndicator = () => {
         switch (saveStatus) {
@@ -76,6 +67,8 @@ const Header: React.FC<HeaderProps> = ({ currentPage, setPage, saveStatus, accen
     }, []);
 
     const mainNavItems = [
+        { page: Page.Dashboard, label: 'Dashboard', icon: <HomeIcon className="w-5 h-5" /> },
+        { page: Page.Assets, label: 'Assets', icon: <SparklesIcon className="w-5 h-5" /> },
         { page: Page.Business, label: 'Business', icon: <BusinessIcon className="w-5 h-5" /> },
         { page: Page.WebDev, label: 'Web-Dev', icon: <CodeIcon className="w-5 h-5" /> },
     ];
@@ -101,28 +94,24 @@ const Header: React.FC<HeaderProps> = ({ currentPage, setPage, saveStatus, accen
     ];
 
     return (
-        <header
-            className="bg-gray-900/60 backdrop-blur-xl border border-white/10 rounded-lg p-2 shadow-lg sticky top-4 z-50"
-            style={{ boxShadow: `0 0 45px ${accent}33` }}
-        >
+        <header className="bg-gray-900/50 backdrop-blur-sm border border-white/10 rounded-lg p-2 shadow-lg sticky top-4 z-50">
             <div className="flex flex-wrap justify-between items-center gap-2">
                 {/* Left Side: Logo & Main Nav */}
                 <div className="flex items-center gap-4">
                     <div className="flex items-center gap-2 flex-shrink-0">
-                        <BibIcon className="w-8 h-8" />
+                        <BibIcon className="w-8 h-8 text-cyan-400" />
                         <h1 className="hidden md:block text-2xl font-bold text-white tracking-tighter">TrouPrive</h1>
                     </div>
                     <nav className="flex items-center gap-1 bg-gray-800/50 p-1 rounded-md">
                         {mainNavItems.map(item => (
-                            <NavLink key={item.page} {...item} currentPage={currentPage} setPage={setPage} accentColor={accent} />
+                            <NavLink key={item.page} {...item} currentPage={currentPage} setPage={setPage} />
                         ))}
                         {/* AI Dropdown */}
                         <div className="relative" ref={aiMenuRef}>
                             <button
                                 onClick={() => setIsAiMenuOpen(prev => !prev)}
-                                className={`flex items-center gap-2 px-3 py-2 text-sm font-semibold rounded-md transition-all ${isCurrentPageInAi ? 'text-gray-900 shadow-lg' : 'text-gray-300 hover:bg-gray-700/50 hover:text-white'}`}
+                                className={`flex items-center gap-2 px-3 py-2 text-sm font-semibold rounded-md transition-colors ${isCurrentPageInAi ? 'bg-cyan-500 text-white' : 'text-gray-300 hover:bg-gray-700/50 hover:text-white'}`}
                                 title="AI Section"
-                                style={isCurrentPageInAi ? { backgroundColor: accent, boxShadow: `0 0 22px ${accent}55`, color: '#020617' } : undefined}
                             >
                                 <BibIcon className="w-5 h-5" />
                                 <span className="hidden lg:inline">AI</span>
@@ -134,20 +123,16 @@ const Header: React.FC<HeaderProps> = ({ currentPage, setPage, saveStatus, accen
                                         @keyframes fade-in-fast { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
                                         .animate-fade-in-fast { animation: fade-in-fast 0.15s ease-out; }
                                     `}</style>
-                                    {aiNavItems.map(item => {
-                                        const isActive = currentPage === item.page;
-                                        return (
-                                            <a
-                                                key={item.page}
-                                                href="#"
-                                                onClick={(e) => { e.preventDefault(); setPage(item.page); setIsAiMenuOpen(false); }}
-                                                className={`block w-full text-left px-4 py-2 text-sm transition-colors ${isActive ? 'text-gray-900' : 'text-gray-300 hover:bg-gray-700 hover:text-white'}`}
-                                                style={isActive ? { backgroundColor: `${accent}33`, color: '#020617' } : undefined}
-                                            >
-                                                {item.label}
-                                            </a>
-                                        );
-                                    })}
+                                    {aiNavItems.map(item => (
+                                         <a
+                                            key={item.page}
+                                            href="#"
+                                            onClick={(e) => { e.preventDefault(); setPage(item.page); setIsAiMenuOpen(false); }}
+                                            className={`block w-full text-left px-4 py-2 text-sm transition-colors ${currentPage === item.page ? 'bg-cyan-500/50 text-white' : 'text-gray-300 hover:bg-gray-700'}`}
+                                        >
+                                            {item.label}
+                                        </a>
+                                    ))}
                                 </div>
                             )}
                         </div>
@@ -161,7 +146,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage, setPage, saveStatus, accen
                     </div>
                     <nav className="flex items-center gap-1 bg-gray-800/50 p-1 rounded-md">
                          {utilityNavItems.map(item => (
-                            <NavLink key={item.page} {...item} currentPage={currentPage} setPage={setPage} breakpoint="xl" accentColor={accent} />
+                            <NavLink key={item.page} {...item} currentPage={currentPage} setPage={setPage} breakpoint="xl" />
                          ))}
                     </nav>
                 </div>

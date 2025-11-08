@@ -12,17 +12,6 @@ dist
 dist-ssr
 *.local
 
-# Next.js
-/.next/
-/out/
-.next
-out
-
-# Environment variables
-.env
-.env.local
-.env.production
-
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -33,14 +22,3 @@ out
 *.njsproj
 *.sln
 *.sw?
-
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-
-# Backup/diff files
-*.diff
-*.minimal
